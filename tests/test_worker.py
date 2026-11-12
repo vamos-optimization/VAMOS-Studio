@@ -29,6 +29,8 @@ class TestFileProgress:
             "evaluations": 400,
             "max_evaluations": 1000,
             "elapsed_seconds": 0,
+            "paused_seconds": 0.0,
+            "ended_by": None,
             "error": None,
         }
         assert np.array_equal(runs.live_front(runs.SolveRun(tmp_path)), front)

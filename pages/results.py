@@ -87,6 +87,13 @@ def show_details(run: runs.SolveRun, request: runs.SolveRequest) -> None:
     facts[1].metric("Generations", outcome.get("generations", "?"))
     facts[2].metric("Runtime", f"{outcome.get('runtime_ms', 0) / 1000:.2f} s")
     facts[3].metric("Seed", request.seed)
+    status = runs.read_status(run)
+    if request.pause_seconds > 0 and status is not None:
+        st.caption(
+            f"The runtime includes {status.paused_seconds:.1f} s of pauses for the live view "
+            f"({request.pause_seconds:g} s every {request.pause_every} generation(s)); they do not "
+            "change the results."
+        )
     if runs.state(run) == runs.RunState.STOPPED:
         st.info(f"Stopped at your request, before its budget of {request.max_evaluations:,}.")
     space = builtin_space(request.algorithm, request.encoding)

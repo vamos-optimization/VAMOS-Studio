@@ -10,7 +10,7 @@ from vamos_studio.backend import runs
 from vamos_studio.backend.catalogue import problem_entry, reference_front
 from vamos_studio.backend.runs import RunState
 
-REFRESH_SECONDS = 1
+REFRESH_SECONDS = 0.5
 
 st.title("Monitor")
 
@@ -63,6 +63,11 @@ def show_run(run: runs.SolveRun) -> None:
     status = runs.read_status(run)
     st.subheader(f"{run.run_id}: {state.value}")
     st.caption(f"{request.algorithm} on {request.problem}, seed {request.seed}")
+    if request.pause_seconds > 0:
+        st.caption(
+            f"Slowed down for the live view: a pause of {request.pause_seconds:g} s every "
+            f"{request.pause_every} generation(s)."
+        )
     if status is not None:
         st.progress(
             status.fraction_done,

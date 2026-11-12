@@ -12,10 +12,13 @@ from vamos_studio.backend.catalogue import algorithm_entries, problem_entries
 from vamos_studio.backend.upstream.parameter_space import Parameter, ParameterSpace
 from vamos_studio.backend.upstream.vamos_bridge import builtin_space
 from vamos_studio.configuration_form import active_fields, changes, configuration_of
+from vamos_studio.live_view import estimated_generations, pause_overhead
 from vamos_studio.parameter_tree import format_value
 
 DEFAULT_EVALUATIONS = 25000
 DEFAULT_SEED = 1
+DEFAULT_PAUSE_SECONDS = 0.2
+DEFAULT_PAUSE_EVERY = 5
 
 st.title("New run")
 st.info(
@@ -120,6 +123,45 @@ max_evaluations = left.number_input(
 )
 seed = right.number_input("Seed", min_value=0, max_value=2**31 - 1, value=DEFAULT_SEED, step=1)
 
+
+def render_live_view(max_evaluations: int, values: dict) -> tuple[float, int]:
+    """The pauses that let the Monitor show the front converge; (0, 1) runs at full speed."""
+    with st.expander("Live view"):
+        slow = st.checkbox(
+            "Slow the run down to watch the front converge",
+            help="The run pauses now and then, after reporting its front, so that the Monitor "
+            "can show how it evolves. Only the runtime changes: the results are the same.",
+        )
+        left, right = st.columns(2)
+        pause_seconds = left.number_input(
+            "Pause (seconds)",
+            min_value=0.05,
+            max_value=5.0,
+            value=DEFAULT_PAUSE_SECONDS,
+            step=0.05,
+            format="%g",
+            disabled=not slow,
+        )
+        pause_every = right.number_input(
+            "Every (generations)",
+            min_value=1,
+            max_value=1000,
+            value=DEFAULT_PAUSE_EVERY,
+            step=1,
+            disabled=not slow,
+        )
+        if not slow:
+            return 0.0, 1
+        generations = estimated_generations(
+            max_evaluations, int(values["pop_size"]), float(values["offspring_ratio"])
+        )
+        added = pause_overhead(generations, float(pause_seconds), int(pause_every))
+        st.caption(f"About {generations:,} generations: the pauses add about {added:.0f} s.")
+        return float(pause_seconds), int(pause_every)
+
+
+pause_seconds, pause_every = render_live_view(int(max_evaluations), dict(configuration.values))
+
 if st.button("Launch the run", type="primary", icon=":material/play_arrow:"):
     request = runs.SolveRequest(
         problem=problem.key,
@@ -130,6 +172,8 @@ if st.button("Launch the run", type="primary", icon=":material/play_arrow:"):
         configuration=dict(configuration.values),
         max_evaluations=int(max_evaluations),
         seed=int(seed),
+        pause_seconds=pause_seconds,
+        pause_every=pause_every,
     )
     run = runs.launch(request, runs.runs_directory())
     ui.select_run(run)

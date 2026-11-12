@@ -74,6 +74,9 @@ class SolveRequest:
         configuration: The value of every active parameter, in depth-first order.
         max_evaluations: The evaluation budget.
         seed: The random seed.
+        pause_seconds: How long the worker pauses, to let the live view show the front
+            converge; 0 runs at full speed. Pausing changes the runtime, never the results.
+        pause_every: Every how many generations it pauses.
     """
 
     problem: str
@@ -84,6 +87,8 @@ class SolveRequest:
     configuration: dict[str, Any] = field(default_factory=dict)
     max_evaluations: int = 25000
     seed: int = 1
+    pause_seconds: float = 0.0
+    pause_every: int = 1
 
     def to_dict(self) -> dict[str, Any]:
         """The request as a JSON-ready mapping."""
@@ -105,6 +110,8 @@ class RunStatus:
         evaluations: The evaluations done so far.
         max_evaluations: The evaluation budget.
         elapsed_seconds: The time since the run started.
+        paused_seconds: How much of that time the worker spent pausing for the live view.
+        ended_by: What ended a run that is over: "evaluations" or "user".
         error: Why the run failed, if it did.
     """
 
@@ -113,6 +120,8 @@ class RunStatus:
     evaluations: int = 0
     max_evaluations: int = 0
     elapsed_seconds: float = 0.0
+    paused_seconds: float = 0.0
+    ended_by: str | None = None
     error: str | None = None
 
     @property
