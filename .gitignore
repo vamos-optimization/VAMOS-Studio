@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+.venv/
+
+# Runtime files: the runs launched from the app and their VAMOS artifacts
+/solve-runs/
+
+# IDE
+.idea/
+.vscode/
+.DS_Store

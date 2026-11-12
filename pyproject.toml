@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vamos-studio"
+version = "0.1.0.dev0"
+description = "Streamlit GUI and analysis tool for VAMOS"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    # The backend. Pinned to a minor series: the studio reads parts of VAMOS's catalogue that
+    # are internal in 1.1 (see CLAUDE.md, "Relationship to VAMOS").
+    "vamos-optimization>=1.1,<1.2",
+    "streamlit>=1.40",
+    "pyyaml",
+    "pandas",
+    "plotly",
+    # The hypervolume of the fronts.
+    "moocore",
+]
+
+[project.optional-dependencies]
+# Numba kernels for faster runs (VAMOS's `compute` extra).
+fast = [
+    "vamos-optimization[compute]>=1.1,<1.2",
+]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[tool.setuptools.packages.find]
+include = ["vamos_studio*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "C901"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
