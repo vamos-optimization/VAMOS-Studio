@@ -8,7 +8,7 @@ from __future__ import annotations
 import streamlit as st
 
 from vamos_studio.backend import runs
-from vamos_studio.backend.catalogue import problem_entry
+from vamos_studio.backend.catalogue import problem_details, problem_entry
 
 NEW_RUN = "pages/new_run.py"
 MONITOR = "pages/monitor.py"
@@ -65,3 +65,10 @@ def describe(run: runs.SolveRun) -> str:
 def objectives_of(request: runs.SolveRequest) -> int:
     """The number of objectives of a run: the one it asked for, or its problem's default."""
     return request.n_obj or problem_entry(request.problem).n_obj
+
+
+def variables_of(request: runs.SolveRequest) -> int:
+    """The number of variables of a run: the one it asked for, or its problem's."""
+    if request.n_var is not None:
+        return request.n_var
+    return problem_details(request.problem, objectives_of(request)).n_var

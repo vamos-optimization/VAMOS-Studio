@@ -30,6 +30,10 @@ def number_input(app: AppTest, label: str):
     return next(widget for widget in app.number_input if widget.label == label)
 
 
+def checkbox(app: AppTest, label: str):
+    return next(widget for widget in app.checkbox if widget.label == label)
+
+
 @pytest.fixture(scope="module")
 def launched(tmp_path_factory) -> tuple[Path, AppTest]:
     """A run launched from the New run page with 2000 evaluations, finished."""
@@ -91,7 +95,7 @@ class TestLiveView:
         monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
         app = open_page(NEW_RUN)
         number_input(app, "Evaluations").set_value(2000).run()
-        app.checkbox[0].check().run()
+        checkbox(app, "Slow the run down to watch the front converge").check().run()
         number_input(app, "Every (generations)").set_value(4).run()
 
         # Act
@@ -111,7 +115,7 @@ class TestLiveView:
         app = open_page(NEW_RUN)
 
         # Act
-        app.checkbox[0].check().run()
+        checkbox(app, "Slow the run down to watch the front converge").check().run()
 
         # Assert
         assert any(c.value.startswith("About 249 generations") for c in app.caption)
@@ -188,7 +192,7 @@ class TestThreeObjectives:
         # Assert
         assert runs.read_request(run).n_obj == 3
         assert not results.exception
-        assert any("with 3 objectives" in c.value for c in results.caption)
+        assert any("with 12 variables and 3 objectives" in c.value for c in results.caption)
         assert results.dataframe[0].value.columns[:4].tolist() == ["solution", "f1", "f2", "f3"]
 
 

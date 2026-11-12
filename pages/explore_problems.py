@@ -9,16 +9,18 @@ from vamos_studio import charts
 from vamos_studio.backend.catalogue import (
     ENCODING_LABELS,
     family_label,
+    format_arguments,
     problem_details,
     problem_entries,
 )
+from vamos_studio.problem_form import render_problem_arguments
 
 st.title("Problems")
 st.markdown("The problems of VAMOS, grouped by family.")
 st.info(
-    "Prototype: the **ZDT** and **DTLZ** families, for real-coded problems, are available (DTLZ "
-    "with two or three objectives). ZDT5 is binary-coded, and the other families are listed but "
-    "not active yet.",
+    "Prototype: the **ZDT** and **DTLZ** families, for real-coded problems, are available: set "
+    "their number of variables, and DTLZ's number of objectives (two or three). ZDT5 is "
+    "binary-coded, and the other families are listed but not active yet.",
     icon=":material/construction:",
 )
 
@@ -56,6 +58,7 @@ st.dataframe(
                 "Variables": m.n_var,
                 "Objectives": m.n_obj,
                 "Status": "✅ available" if m.available else "⏳ coming soon",
+                "Arguments": format_arguments(m.key) if m.available else "",
                 "Description": m.description,
             }
             for m in members
@@ -68,17 +71,10 @@ st.dataframe(
 problem = st.selectbox(
     "Problem", [m for m in members if m.available], format_func=lambda item: item.label
 )
-n_obj = problem.n_obj
-if len(problem.n_obj_options) > 1:
-    n_obj = st.radio(
-        "Objectives",
-        problem.n_obj_options,
-        index=problem.n_obj_options.index(problem.n_obj),
-        horizontal=True,
-        help="VAMOS lets you choose the number of objectives of this problem; the studio offers "
-        "those it has reference fronts and charts for.",
-    )
-details = problem_details(problem.key, n_obj)
+arguments = render_problem_arguments(problem, "explore_problems")
+if arguments is None:
+    st.stop()
+details = problem_details(problem.key, arguments.get("n_obj"), arguments.get("n_var"))
 st.subheader(problem.label)
 st.markdown(problem.description)
 facts = st.columns(3)

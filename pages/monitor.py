@@ -88,8 +88,8 @@ def show_run(run: runs.SolveRun) -> None:
     status = runs.read_status(run)
     st.subheader(f"{run.run_id}: {state.value}")
     st.caption(
-        f"{request.algorithm} on {request.problem} with {ui.objectives_of(request)} objectives, "
-        f"seed {request.seed}"
+        f"{request.algorithm} on {request.problem} with {ui.variables_of(request)} variables and "
+        f"{ui.objectives_of(request)} objectives, seed {request.seed}"
     )
     if request.pause_seconds > 0:
         st.caption(

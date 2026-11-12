@@ -208,6 +208,8 @@ def solve(request: SolveRequest, progress: FileProgress) -> Any:
         max_evaluations=request.max_evaluations,
         seed=request.seed,
         n_obj=request.n_obj,
+        n_var=request.n_var,
+        problem_kwargs=request.problem_kwargs or None,
         live_viz=progress,
     )
 

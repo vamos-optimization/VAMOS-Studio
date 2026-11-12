@@ -149,7 +149,10 @@ front, variables = runs.result_front(run, whole=whole)
 problem = problem_entry(request.problem)
 n_obj = ui.objectives_of(request)
 reference = reference_front(problem.key, n_obj)
-st.caption(f"{request.algorithm} on {problem.label} with {n_obj} objectives, seed {request.seed}")
+st.caption(
+    f"{request.algorithm} on {problem.label} with {ui.variables_of(request)} variables and "
+    f"{n_obj} objectives, seed {request.seed}"
+)
 
 front_tab, indicators_tab, solutions_tab, details_tab = st.tabs(
     ["Front", "Indicators", "Solutions", "Details"]

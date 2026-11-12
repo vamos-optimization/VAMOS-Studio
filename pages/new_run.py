@@ -8,12 +8,18 @@ import streamlit as st
 
 from vamos_studio import ui
 from vamos_studio.backend import runs
-from vamos_studio.backend.catalogue import algorithm_entries, problem_details, problem_entries
+from vamos_studio.backend.catalogue import (
+    algorithm_entries,
+    default_arguments,
+    problem_details,
+    problem_entries,
+)
 from vamos_studio.backend.upstream.parameter_space import Parameter, ParameterSpace
 from vamos_studio.backend.upstream.vamos_bridge import builtin_space
 from vamos_studio.configuration_form import active_fields, changes, configuration_of
 from vamos_studio.live_view import estimated_generations, pause_overhead
 from vamos_studio.parameter_tree import format_value
+from vamos_studio.problem_form import render_problem_arguments
 
 DEFAULT_EVALUATIONS = 25000
 DEFAULT_SEED = 1
@@ -105,16 +111,11 @@ def render_configuration(space: ParameterSpace):
 
 problems = [entry for entry in problem_entries() if entry.available]
 st.subheader("1. Problem")
-left, right = st.columns([3, 1])
-problem = left.selectbox("Problem", problems, format_func=lambda item: item.label)
-n_obj = right.selectbox(
-    "Objectives",
-    problem.n_obj_options,
-    index=problem.n_obj_options.index(problem.n_obj),
-    disabled=len(problem.n_obj_options) == 1,
-    help="DTLZ problems can have two or three objectives; the others have a fixed number.",
-)
-details = problem_details(problem.key, n_obj)
+problem = st.selectbox("Problem", problems, format_func=lambda item: item.label)
+arguments = render_problem_arguments(problem, "new_run")
+valid_problem = arguments is not None
+arguments = arguments if valid_problem else default_arguments(problem.key)
+details = problem_details(problem.key, arguments.get("n_obj"), arguments.get("n_var"))
 st.caption(f"{problem.description} {details.n_var} variables, {details.n_obj} objectives.")
 
 st.subheader("2. Algorithm")
@@ -171,7 +172,13 @@ def render_live_view(max_evaluations: int, values: dict) -> tuple[float, int]:
 
 pause_seconds, pause_every = render_live_view(int(max_evaluations), dict(configuration.values))
 
-if st.button("Launch the run", type="primary", icon=":material/play_arrow:"):
+if st.button(
+    "Launch the run",
+    type="primary",
+    icon=":material/play_arrow:",
+    disabled=not valid_problem,
+    help=None if valid_problem else "Fix the problem's arguments first.",
+):
     request = runs.SolveRequest(
         problem=problem.key,
         algorithm=algorithm.key,
@@ -184,6 +191,8 @@ if st.button("Launch the run", type="primary", icon=":material/play_arrow:"):
         pause_seconds=pause_seconds,
         pause_every=pause_every,
         n_obj=details.n_obj if len(problem.n_obj_options) > 1 else None,
+        n_var=details.n_var,
+        problem_kwargs={k: v for k, v in arguments.items() if k not in ("n_var", "n_obj")},
     )
     run = runs.launch(request, runs.runs_directory())
     ui.select_run(run)

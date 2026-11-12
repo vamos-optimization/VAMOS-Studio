@@ -58,14 +58,16 @@ class TestProblemsPage:
         assert "ZDT5" not in app.selectbox[1].options
 
     @pytest.mark.parametrize("n_obj", [2, 3])
-    def test_should_show_dtlz2_with_the_chosen_objectives(self, n_obj):
+    def test_should_follow_the_objectives_with_the_standard_variables(self, n_obj):
         # Arrange
         app = AppTest.from_file(PROBLEMS_PAGE, default_timeout=60).run()
         app.selectbox[0].select_index(1).run()
         app.selectbox[1].select_index(app.selectbox[1].options.index("DTLZ2")).run()
 
+        next(c for c in app.checkbox if c.label == "Set its arguments").check().run()
+
         # Act
-        app.radio[0].set_value(n_obj).run()
+        next(b for b in app.selectbox if b.label == "Objectives").select(n_obj).run()
 
         # Assert
         assert not app.exception

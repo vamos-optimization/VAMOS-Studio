@@ -8,7 +8,10 @@ family is in `SUPPORTED_PROBLEM_FAMILIES`; everything else is listed as inactive
 
 from __future__ import annotations
 
+import inspect
 import re
+import typing
+from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import cache
 from typing import Final
@@ -60,6 +63,8 @@ FAMILY_LABELS: Final = {
     "lz09_f": "LZ09",
 }
 _FAMILY = re.compile(r"^(.*?)_?\d+$")
+ARGUMENT_LABELS: Final = {"n_var": "Variables", "n_obj": "Objectives"}
+_ARGUMENT_TYPES: Final = {"int": "integer", "float": "number", "bool": "boolean"}
 
 
 @dataclass(slots=True, frozen=True)
@@ -108,6 +113,26 @@ class ProblemEntry:
     n_obj: int
     available: bool
     n_obj_options: tuple[int, ...] = ()
+
+
+@dataclass(slots=True, frozen=True)
+class ProblemArgument:
+    """An argument of a problem's constructor in VAMOS, as Evolver-Studio's problem forms show it.
+
+    Attributes:
+        name: Its name in VAMOS (e.g. "n_var", "complicated_pareto_set").
+        type: "integer", "number" (a decimal) or "boolean".
+        default: Its value in the problem built with its defaults.
+    """
+
+    name: str
+    type: str
+    default: int | float | bool
+
+    @property
+    def label(self) -> str:
+        """Its display name."""
+        return ARGUMENT_LABELS.get(self.name, self.name.replace("_", " ").capitalize())
 
 
 @dataclass(slots=True, frozen=True)
@@ -179,17 +204,76 @@ def problem_entry(key: str) -> ProblemEntry:
     raise KeyError(key)
 
 
-def problem_details(key: str, n_obj: int | None = None) -> ProblemDetails:
-    """The problem `key` with `n_obj` objectives (its default when None).
+@cache
+def problem_arguments(key: str) -> tuple[ProblemArgument, ...]:
+    """The arguments of a problem's constructor in VAMOS, in order, with their defaults.
+
+    They are read from the constructor's signature, as Evolver-Studio reads them from Evolver's
+    DescribeMain. The number of objectives is an argument only when VAMOS lets you choose it;
+    the defaults of `n_var` and `n_obj` are the problem's default dimensions.
+    """
+    entry = problem_entry(key)
+    constructor = type(vamos.make_problem_selection(key).instantiate()).__init__
+    found = []
+    for parameter in list(inspect.signature(constructor).parameters.values())[1:]:
+        if parameter.name == "n_obj" and len(entry.n_obj_options) < 2:
+            continue
+        default = {"n_var": entry.n_var, "n_obj": entry.n_obj}.get(
+            parameter.name, parameter.default
+        )
+        found.append(ProblemArgument(parameter.name, _argument_type(parameter), default))
+    return tuple(found)
+
+
+def default_arguments(key: str) -> dict[str, int | float | bool]:
+    """The value of every argument of a problem built with its defaults."""
+    return {argument.name: argument.default for argument in problem_arguments(key)}
+
+
+def standard_variables(key: str, n_obj: int) -> int:
+    """The number of variables VAMOS gives a problem with `n_obj` objectives by default.
+
+    For DTLZ it follows the number of objectives (DTLZ2: 11 with two, 12 with three).
+    """
+    return int(vamos.make_problem_selection(key, n_obj=n_obj).n_var)
+
+
+def min_variables(key: str, n_obj: int) -> int:
+    """The fewest variables the studio accepts: a DTLZ problem needs one per objective at least."""
+    return n_obj if family_of(key) == "dtlz" else 2
+
+
+def argument_problems(key: str, arguments: Mapping[str, object]) -> list[str]:
+    """What is wrong with these arguments of a problem; empty when they are fine."""
+    entry = problem_entry(key)
+    n_obj = int(arguments.get("n_obj", entry.n_obj))
+    problems = []
+    if n_obj not in entry.n_obj_options:
+        problems.append(f"{entry.label} cannot have {n_obj} objectives here.")
+    n_var = arguments.get("n_var")
+    if n_var is not None and int(n_var) < min_variables(key, n_obj):
+        problems.append(
+            f"{entry.label} with {n_obj} objectives needs at least "
+            f"{min_variables(key, n_obj)} variables."
+        )
+    return problems
+
+
+def problem_details(key: str, n_obj: int | None = None, n_var: int | None = None) -> ProblemDetails:
+    """The problem `key` with `n_obj` objectives and `n_var` variables (its defaults when None).
 
     Raises:
-        ValueError: If the problem does not allow that number of objectives.
+        ValueError: If the problem does not allow those arguments.
     """
     entry = problem_entry(key)
     n_obj = entry.n_obj if n_obj is None else n_obj
-    if entry.n_obj_options and n_obj not in entry.n_obj_options:
-        raise ValueError(f"{entry.label} cannot have {n_obj} objectives here.")
-    selection = vamos.make_problem_selection(key, n_obj=n_obj if n_obj != entry.n_obj else None)
+    arguments = {"n_obj": n_obj} | ({} if n_var is None else {"n_var": n_var})
+    problems = argument_problems(key, arguments)
+    if problems:
+        raise ValueError(" ".join(problems))
+    selection = vamos.make_problem_selection(
+        key, n_var=n_var, n_obj=n_obj if n_obj != entry.n_obj else None
+    )
     n_var = int(selection.n_var)
     problem = selection.instantiate()
     lower = np.broadcast_to(np.asarray(problem.xl, dtype=float), (n_var,))
@@ -240,3 +324,22 @@ def _problem_entry(key: str) -> ProblemEntry:
         available=SUPPORTED_PROBLEM_FAMILIES.get(family) == encoding,
         n_obj_options=SUPPORTED_N_OBJ if spec.allow_n_obj_override else (int(selection.n_obj),),
     )
+
+
+def format_arguments(key: str) -> str:
+    """A problem's arguments in one line, e.g. "n_var: integer = 12, n_obj: integer = 3"."""
+    return ", ".join(
+        f"{argument.name}: {argument.type} = {argument.default}"
+        for argument in problem_arguments(key)
+    )
+
+
+def _argument_type(parameter: inspect.Parameter) -> str:
+    """The type of a constructor parameter, from its annotation or its default."""
+    annotation = parameter.annotation
+    members = [a for a in typing.get_args(annotation) if a is not type(None)] or [annotation]
+    text = annotation if isinstance(annotation, str) else getattr(members[0], "__name__", "")
+    if not text and parameter.default is not inspect.Parameter.empty:
+        text = type(parameter.default).__name__
+    base = str(text).split("|")[0].strip()
+    return _ARGUMENT_TYPES.get(base, "number")
