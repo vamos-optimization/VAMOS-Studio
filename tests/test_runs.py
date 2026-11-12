@@ -25,6 +25,17 @@ class TestRequest:
         # Assert
         assert restored == request
 
+    def test_should_read_a_request_stored_before_the_live_view_options(self):
+        # Arrange
+        stored = make_request().to_dict()
+        del stored["pause_seconds"], stored["pause_every"]
+
+        # Act
+        request = runs.SolveRequest.from_dict(stored)
+
+        # Assert
+        assert (request.pause_seconds, request.pause_every) == (0.0, 1)
+
     def test_should_name_a_new_directory_after_the_time_without_reusing_one(self, tmp_path):
         # Arrange
         now = datetime(2026, 11, 12, 15, 30, 0)
@@ -94,6 +105,7 @@ class TestStopAndCancel:
         # Assert
         assert state == RunState.STOPPED
         assert runs.read_status(run).evaluations < LONG_BUDGET
+        assert runs.read_status(run).ended_by == "user"
         assert len(runs.result_front(run)[0]) > 0
 
     def test_should_cancel_a_run_without_results(self, tmp_path):

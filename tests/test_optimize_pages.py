@@ -85,6 +85,38 @@ class TestNewRun:
         assert app.title[0].value == "Monitor"
 
 
+class TestLiveView:
+    def test_should_record_the_pauses_chosen_in_new_run(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        app = open_page(NEW_RUN)
+        number_input(app, "Evaluations").set_value(2000).run()
+        app.checkbox[0].check().run()
+        number_input(app, "Every (generations)").set_value(4).run()
+
+        # Act
+        next(b for b in app.button if b.label == "Launch the run").click().run()
+        run = runs.list_runs(tmp_path)[0]
+        wait_for_end(run)
+
+        # Assert
+        request = runs.read_request(run)
+        assert (request.pause_seconds, request.pause_every) == (0.2, 4)
+        assert runs.state(run) == RunState.FINISHED
+        assert runs.read_status(run).paused_seconds > 0
+
+    def test_should_estimate_what_the_pauses_add(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        app = open_page(NEW_RUN)
+
+        # Act
+        app.checkbox[0].check().run()
+
+        # Assert
+        assert any(c.value.startswith("About 249 generations") for c in app.caption)
+
+
 class TestMonitorHistoryResults:
     def test_should_show_the_finished_run_in_the_monitor(self, launched, monkeypatch):
         # Arrange
