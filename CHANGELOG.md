@@ -36,6 +36,10 @@ Works with VAMOS 1.1.
 - **Optimize › Monitor**: follow a run live (generation, evaluations, elapsed time and its
   non-dominated front over the reference front), stop it keeping what it found, or cancel it; see
   why a run failed or was interrupted.
+- **Live view** (New run): a run can be slowed down to watch its front converge in the Monitor,
+  pausing a chosen time every chosen number of generations, with an estimate of what the pauses
+  add. The front is reported before each pause; the pauses change the runtime, never the results.
+  The Monitor refreshes twice a second.
 - **Optimize › History**: every run with its state, problem, algorithm, budget and seed; open one
   in the monitor or in the results.
 - **Analyze › Results**: the front of a run with its knee and extremes, its quality indicators,
