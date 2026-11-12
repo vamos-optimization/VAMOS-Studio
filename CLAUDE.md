@@ -14,8 +14,9 @@ The difference is the backend: VAMOS, called from Python, instead of a Java jar.
 
 The roadmap, in phases:
 
-1. **Explore + Solve** (current): catalogue of algorithms, problems and indicators; run an
-   algorithm on a problem with a live view of the front, cancel it, inspect the result.
+1. **Explore + Optimize + Analyze** (current prototype: NSGA-II on ZDT): catalogue of
+   algorithms, problems and indicators; New run, Monitor and History; Results. The pages follow
+   Transept's sections (Optimize: New run, Monitor, History; Analyze: Results).
 2. **Training**: automatic algorithm configuration through the `vamos tune` CLI.
 3. **Validation**: VAMOS studies (`StudySpec`, `create_study`) plus a statistical-analysis layer
    (Wilcoxon, effect sizes, rankings, attainment, LaTeX/SAES export).

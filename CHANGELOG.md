@@ -10,8 +10,8 @@ Works with VAMOS 1.1.
 
 ### Added
 
-- The app's shell: a home page with a card for each page, and the Explore (Algorithms, Problems,
-  Quality indicators) and Solve (Run algorithm) sections as placeholders.
+- The app's shell: a home page with a card for each page, and the Explore, Optimize and Analyze
+  sections, organized as Transept's.
 - **Explore › Algorithms** (prototype): the parameter space of NSGA-II for real-coded problems
   as a grammar, shown as a tree, as a table of parameters with when each one is active, as its
   default configuration (a command line that runs exactly as VAMOS's default NSGA-II) and as
@@ -29,6 +29,19 @@ Works with VAMOS 1.1.
   and jMetal's license. VAMOS 1.1's ZDT samples are inaccurate (up to 0.0146 off the true front
   for ZDT4, whose bounds are wrong too); jMetal's lie on the true fronts. Explore › Problems and
   Explore › Quality indicators say where each front comes from.
+- **Optimize › New run**: choose a ZDT problem and NSGA-II, adjust its configuration from the
+  default one in a form built from its grammar (only the active parameters are shown, and the
+  changes and the equivalent command line are listed), set the evaluations and the seed, and
+  launch the run in the background, as a worker process that survives the browser.
+- **Optimize › Monitor**: follow a run live (generation, evaluations, elapsed time and its
+  non-dominated front over the reference front), stop it keeping what it found, or cancel it; see
+  why a run failed or was interrupted.
+- **Optimize › History**: every run with its state, problem, algorithm, budget and seed; open one
+  in the monitor or in the results.
+- **Analyze › Results**: the front of a run with its knee and extremes, its quality indicators,
+  its solutions (downloadable as FUN.csv and VAR.csv), and its details: evaluations, runtime,
+  configuration, the specification VAMOS resolved, and a check of VAMOS's run artifact.
+- Runs are kept in `solve-runs/` (or `$VAMOS_STUDIO_RUNS`), each with VAMOS's run artifact.
 - Parameter spaces as grammars (`vamos.parameter-space` 1.0.0) and configurations as their
   derivations, with a validator, YAML serialization and content hashes; see
   `docs/design/parameter-spaces.md`.
