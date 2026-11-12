@@ -19,6 +19,13 @@ Works with VAMOS 1.1.
 - **Explore › Problems** (prototype): VAMOS's problem families, with the real-coded ZDT problems
   (ZDT1–4, ZDT6) available: their variables, objectives, bounds and reference front. ZDT5 (binary)
   and the other families are listed as coming soon.
+- **Explore › Quality indicators**: the ten indicators of VAMOS with what each one measures,
+  whether higher or lower is better and what it is measured against; HV, NHV, IGD, IGD+, additive
+  epsilon and Δp are available, the others list why not yet. Fronts are normalized with their
+  problem's reference front, as Evolver does, so values match Evolver-Studio's. A sandbox moves
+  points of a ZDT reference front away from it and shows how each indicator responds.
+- **Explore › Problems** warns that VAMOS 1.1's ZDT reference fronts are inaccurate (up to 0.0146
+  for ZDT4), so indicators measured against them are not comparable with later VAMOS versions.
 - Parameter spaces as grammars (`vamos.parameter-space` 1.0.0) and configurations as their
   derivations, with a validator, YAML serialization and content hashes; see
   `docs/design/parameter-spaces.md`.
