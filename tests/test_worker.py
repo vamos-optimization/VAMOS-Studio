@@ -248,3 +248,37 @@ class TestRun:
     def test_should_refuse_a_wrong_number_of_arguments(self):
         # Act / Assert
         assert worker.main([]) == 2
+
+
+class TestProblemArguments:
+    """VAMOS 1.1 fails on arguments other than n_var and n_obj of a problem given by id."""
+
+    def test_should_give_vamos_the_problem_id_without_other_arguments(self):
+        # Act / Assert
+        assert worker.problem_to_solve(make_request("zdt1")) == "zdt1"
+
+    def test_should_solve_a_problem_with_other_arguments_through_its_class(self, tmp_path):
+        # Arrange
+        request = runs.SolveRequest.from_dict(
+            make_request("zdt1", 1000).to_dict()
+            | {"problem": "bin_knapsack", "problem_kwargs": {"capacity_ratio": 0.6}}
+        )
+        binary = builtin_space("nsgaii", "binary")
+        request = runs.SolveRequest.from_dict(
+            request.to_dict()
+            | {
+                "encoding": "binary",
+                "space": binary.name,
+                "space_hash": binary.content_hash(),
+                "configuration": dict(binary.default_configuration().values),
+            }
+        )
+        runs.write_json(tmp_path / runs.REQUEST_FILE, request.to_dict())
+
+        # Act
+        code = worker.run(tmp_path, min_interval=0.0)
+
+        # Assert
+        manifest = runs.manifest(runs.SolveRun(tmp_path))
+        assert code == 0
+        assert manifest["resolved_spec"]["problem"]["config"]["capacity_ratio"] == 0.6

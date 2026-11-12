@@ -260,3 +260,29 @@ class TestProblemArguments:
         # Assert
         assert "DTLZ2 with 3 objectives needs at least 3 variables." in [e.value for e in app.error]
         assert next(b for b in app.button if b.label == "Launch the run").disabled
+
+
+class TestBinaryProblem:
+    def test_should_solve_knapsack_and_show_its_results_without_a_reference_front(
+        self, tmp_path, monkeypatch
+    ):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        app = open_page(NEW_RUN)
+        problem = next(box for box in app.selectbox if box.label == "Problem")
+        problem.select_index(problem.options.index("Binary Knapsack")).run()
+        number_input(app, "Evaluations").set_value(2000).run()
+
+        # Act
+        next(b for b in app.button if b.label == "Launch the run").click().run()
+        run = runs.list_runs(tmp_path)[0]
+        wait_for_end(run)
+        results = open_page(RESULTS)
+
+        # Assert
+        assert runs.read_request(run).encoding == "binary"
+        assert not results.exception
+        assert any("no reference front" in info.value for info in results.info)
+        solutions = results.dataframe[-1].value
+        assert set(solutions["x1"].unique()) <= {0, 1}
+        assert solutions["x1"].dtype.kind == "i"

@@ -82,6 +82,15 @@ INDICATORS_PAGE = str(ROOT / "pages" / "explore_indicators.py")
 
 
 class TestIndicatorsPage:
+    def test_should_offer_only_problems_with_a_reference_front(self):
+        # Act
+        app = AppTest.from_file(INDICATORS_PAGE, default_timeout=60).run()
+
+        # Assert
+        options = next(box for box in app.selectbox if box.label == "Problem").options
+        assert "ZDT1" in options and "DTLZ2" in options
+        assert "Binary Knapsack" not in options
+
     def test_should_show_one_row_per_indicator(self):
         # Arrange
         from vamos_studio.backend.indicators import INDICATORS
