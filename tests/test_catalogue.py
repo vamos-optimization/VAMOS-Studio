@@ -1,0 +1,74 @@
+"""Tests for the catalogue of algorithms and problems."""
+
+import pytest
+
+from vamos_studio.backend import catalogue
+
+
+class TestAlgorithms:
+    def test_should_list_every_vamos_algorithm(self):
+        # Act
+        keys = {entry.key for entry in catalogue.algorithm_entries()}
+
+        # Assert
+        assert keys == {
+            "agemoea",
+            "ibea",
+            "moead",
+            "nsgaii",
+            "nsgaiii",
+            "rvea",
+            "smpso",
+            "smsemoa",
+            "spea2",
+        }
+
+    def test_should_make_only_nsgaii_for_real_problems_available(self):
+        # Act
+        available = {
+            entry.key: entry.encodings for entry in catalogue.algorithm_entries() if entry.available
+        }
+
+        # Assert
+        assert available == {"nsgaii": ("real",)}
+
+
+class TestProblems:
+    @pytest.mark.parametrize(
+        ("key", "family"),
+        [("zdt1", "zdt"), ("dtlz7", "dtlz"), ("cec2009_uf1", "cec2009_uf"), ("lz09_f1", "lz09_f")],
+    )
+    def test_should_find_the_family_of_a_problem(self, key, family):
+        # Act / Assert
+        assert catalogue.family_of(key) == family
+
+    def test_should_make_only_the_real_coded_zdt_problems_available(self):
+        # Act
+        available = {entry.key for entry in catalogue.problem_entries() if entry.available}
+
+        # Assert
+        assert available == {"zdt1", "zdt2", "zdt3", "zdt4", "zdt6"}
+
+    def test_should_list_zdt5_as_binary_and_inactive(self):
+        # Act
+        entry = catalogue.problem_entry("zdt5")
+
+        # Assert
+        assert entry.encoding == "binary"
+        assert not entry.available
+
+    def test_should_give_the_bounds_and_reference_front_of_zdt4(self):
+        # Act
+        details = catalogue.problem_details("zdt4")
+
+        # Assert
+        assert details.entry.n_var == 10
+        assert (details.lower[0], details.upper[0]) == (0.0, 1.0)
+        assert (details.lower[1], details.upper[1]) == (-5.0, 5.0)
+        assert details.reference_front is not None
+        assert details.reference_front.shape[1] == 2
+
+    def test_should_raise_for_an_unknown_problem(self):
+        # Act / Assert
+        with pytest.raises(KeyError):
+            catalogue.problem_entry("no_such_problem")
