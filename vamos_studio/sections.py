@@ -65,8 +65,9 @@ SECTIONS = (
                 "pages/explore_indicators.py",
                 "Quality indicators",
                 "📏",
-                "The quality indicators used to assess the fronts, and what each one measures.",
-                available=False,
+                "The quality indicators of VAMOS, what each one measures and how the studio "
+                "normalizes fronts, with a sandbox to see how they respond.",
+                available=True,
             ),
         ),
     ),
