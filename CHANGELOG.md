@@ -37,6 +37,14 @@ Works with VAMOS 1.1.
   over the reference front), stop it keeping what it found, or cancel it; see why a run failed or
   was interrupted. With an external archive, the live front is the archive, which is what the run
   returns; otherwise, the non-dominated front of the population. The caption says which.
+- **Problem arguments**, as in Evolver-Studio: each problem's arguments are read from its VAMOS
+  constructor, with their types and defaults (ZDT: variables; DTLZ: variables and objectives;
+  ZCAT's six are ready for when the family is enabled). Explore › Problems lists them, and there
+  and in New run a "Set its arguments" checkbox shows one input per argument; without it, the
+  problem keeps its defaults. Changing a DTLZ problem's objectives sets its variables to the
+  standard number for them. Arguments VAMOS would accept but that make no sense are refused (a
+  DTLZ problem with fewer variables than objectives), and a run cannot be launched with them.
+  Runs record their variables; History, the Monitor and Results show them.
 - **Subset of an unbounded archive**: a bounded external archive is as large as the population;
   a run with an unbounded one now returns, as jMetal does, a diverse subset of it as large as the
   population instead of every non-dominated solution found (thousands). The new parameter `archive_subset_selection` of NSGA-II's grammar chooses how:
