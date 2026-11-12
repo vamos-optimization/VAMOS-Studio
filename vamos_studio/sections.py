@@ -59,7 +59,7 @@ SECTIONS = (
                 "🧩",
                 "The benchmark and real-world problems available in VAMOS, with their encoding, "
                 "objectives, variables and reference fronts.",
-                available=False,
+                available=True,
             ),
             Page(
                 "pages/explore_indicators.py",
