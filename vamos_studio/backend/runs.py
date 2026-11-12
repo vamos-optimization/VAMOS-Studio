@@ -28,6 +28,14 @@ import numpy as np
 import vamos
 from numpy.typing import NDArray
 
+from . import approximate_fronts
+from .catalogue import (
+    problem_details,
+    problem_entry,
+    reference_front,
+    reference_front_source,
+)
+
 RUNS_DIRECTORY_ENV: Final = "VAMOS_STUDIO_RUNS"
 REQUEST_FILE: Final = "request.json"
 STATUS_FILE: Final = "status.json"
@@ -85,6 +93,10 @@ class SolveRequest:
             default. VAMOS derives the number of variables from it, unless `n_var` is set.
         n_var: The number of variables; None for the problem's default.
         problem_kwargs: The problem's other arguments (such as ZCAT's `level`), by name.
+        reference_front: What the run is measured against: "exact" (the problem's known front),
+            "approximate" (a copy of its approximate front at launch) or "none".
+        contribute: Whether the run's solutions are added to the approximate front of its
+            problem when it ends.
     """
 
     problem: str
@@ -100,6 +112,8 @@ class SolveRequest:
     n_obj: int | None = None
     n_var: int | None = None
     problem_kwargs: dict[str, Any] = field(default_factory=dict)
+    reference_front: str = "exact"
+    contribute: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         """The request as a JSON-ready mapping."""
@@ -193,6 +207,11 @@ def launch(request: SolveRequest, parent: Path) -> SolveRun:
     """
     directory = new_run_directory(parent)
     directory.mkdir(parents=True)
+    if request.reference_front == "approximate":
+        front = approximate_fronts.load(parent, request.problem, run_arguments(request))
+        if front is None:
+            raise ValueError(f"There is no approximate front of {request.problem} to measure with.")
+        approximate_fronts.snapshot(front, directory)
     write_json(directory / REQUEST_FILE, request.to_dict())
     with (directory / LOG_FILE).open("w", encoding="utf-8") as log:
         process = subprocess.Popen(
@@ -478,3 +497,65 @@ def empty_trash(parent: Path) -> int:
     trashed = list_trash(parent)
     shutil.rmtree(trash_directory(parent), ignore_errors=True)
     return len(trashed)
+
+
+def run_arguments(request: SolveRequest) -> dict[str, Any]:
+    """Every argument of the problem a request solves, as approximate fronts are keyed."""
+    n_obj = request.n_obj or problem_entry(request.problem).n_obj
+    n_var = request.n_var or problem_details(request.problem, n_obj).n_var
+    return approximate_fronts.front_arguments(request.problem, n_var, n_obj, request.problem_kwargs)
+
+
+def reference_front_of(run: SolveRun) -> tuple[NDArray[np.float64] | None, str]:
+    """The front a run is measured against, and where it comes from, in a few words."""
+    request = read_request(run)
+    if request is None or request.reference_front == "none":
+        return None, "no reference front"
+    if request.reference_front == "approximate":
+        metadata = read_json(run.directory / approximate_fronts.SNAPSHOT_METADATA_FILE) or {}
+        try:
+            points = np.loadtxt(
+                run.directory / approximate_fronts.SNAPSHOT_FRONT_FILE, delimiter=",", ndmin=2
+            )
+        except (OSError, ValueError):
+            return None, "its approximate front is missing"
+        return points, (
+            f"the approximate front v{metadata.get('version', '?')} at launch "
+            f"({len(points):,} points, {metadata.get('runs', '?')} runs)"
+        )
+    n_obj = request.n_obj or problem_entry(request.problem).n_obj
+    front = reference_front(request.problem, n_obj)
+    if front is None:
+        return None, "no reference front"
+    return front, f"the exact front ({reference_front_source(request.problem, n_obj)})"
+
+
+def contribute(run: SolveRun) -> approximate_fronts.ApproximateFront:
+    """Add a run's non-dominated solutions (its whole archive) to its problem's approximate front.
+
+    Raises:
+        FileNotFoundError: If the run left no results.
+    """
+    request = read_request(run)
+    front, _ = result_front(run, whole=True)
+    status = read_status(run)
+    return approximate_fronts.add(
+        run.directory.parent,
+        request.problem,
+        run_arguments(request),
+        front,
+        run_id=run.run_id,
+        algorithm=request.algorithm,
+        evaluations=status.evaluations if status else 0,
+    )
+
+
+def contributed(run: SolveRun) -> approximate_fronts.ApproximateFront | None:
+    """The approximate front a run was added to, or None if it was not."""
+    request = read_request(run)
+    if request is None:
+        return None
+    front = approximate_fronts.load(run.directory.parent, request.problem, run_arguments(request))
+    if front is None or run.run_id not in {c.run_id for c in front.contributions}:
+        return None
+    return front

@@ -7,7 +7,6 @@ import streamlit as st
 
 from vamos_studio import charts, ui
 from vamos_studio.backend import runs
-from vamos_studio.backend.catalogue import reference_front
 from vamos_studio.backend.runs import RunState
 
 REFRESH_SECONDS = 0.5
@@ -106,7 +105,7 @@ def show_run(run: runs.SolveRun) -> None:
         metrics[1].metric("Evaluations", f"{status.evaluations:,}")
         metrics[2].metric("Elapsed", f"{status.elapsed_seconds:.1f} s")
     front = runs.live_front(run)
-    reference = reference_front(request.problem, ui.objectives_of(request))
+    reference, _ = runs.reference_front_of(run)
     if reference is not None and len(reference) > MAX_REFERENCE_POINTS:
         reference = reference[:: -(-len(reference) // MAX_REFERENCE_POINTS)]
     st.plotly_chart(charts.front_figure(front, reference), width="stretch")

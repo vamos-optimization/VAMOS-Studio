@@ -26,6 +26,7 @@ from .runs import (
     STOP_FILE,
     SolveRequest,
     SolveRun,
+    contribute,
     read_request,
     write_json,
 )
@@ -255,6 +256,15 @@ def save_selection(directory: Path, request: SolveRequest, result: Any) -> np.nd
     return front[kept]
 
 
+def add_to_approximate_front(run_: SolveRun) -> None:
+    """Add the run to its problem's approximate front; a failure is logged, the run still ends."""
+    try:
+        contribute(run_)
+    except Exception:  # noqa: BLE001 - the run's own results are safe in its artifact
+        traceback.print_exc()
+        print("The run could not be added to the approximate front.", file=sys.stderr)
+
+
 def run(directory: Path, min_interval: float = MIN_WRITE_INTERVAL_SECONDS) -> int:
     """Run the request in `directory`; return the process exit code (0 when it has results)."""
     run_ = SolveRun(directory)
@@ -274,6 +284,8 @@ def run(directory: Path, min_interval: float = MIN_WRITE_INTERVAL_SECONDS) -> in
         selected = save_selection(directory, request, result)
         if selected is not None:
             progress.show_final(selected, len(np.asarray(result.front())))
+        if request.contribute:
+            add_to_approximate_front(run_)
     except Exception as error:  # noqa: BLE001 - report any failure to the app
         traceback.print_exc()
         progress.write_status("failed", error=f"{type(error).__name__}: {error}")

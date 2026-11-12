@@ -7,12 +7,14 @@ from the algorithm's grammar (vamos_studio/configuration_form.py).
 import streamlit as st
 
 from vamos_studio import ui
-from vamos_studio.backend import runs
+from vamos_studio.backend import approximate_fronts, runs
 from vamos_studio.backend.catalogue import (
     algorithm_entries,
     default_arguments,
     problem_details,
     problem_entries,
+    reference_front,
+    reference_front_source,
 )
 from vamos_studio.backend.upstream.parameter_space import Parameter, ParameterSpace
 from vamos_studio.backend.upstream.vamos_bridge import builtin_space
@@ -109,6 +111,36 @@ def render_configuration(space: ParameterSpace):
     return configuration
 
 
+def render_reference_front(problem, n_var: int, n_obj: int, problem_kwargs: dict):
+    """The front the run is measured against, and whether it adds to the approximate front."""
+    exact = reference_front(problem.key, n_obj) is not None
+    arguments = approximate_fronts.front_arguments(problem.key, n_var, n_obj, problem_kwargs)
+    approximate = approximate_fronts.load(runs.runs_directory(), problem.key, arguments)
+    options = {}
+    if exact:
+        options["exact"] = f"Exact ({reference_front_source(problem.key, n_obj)})"
+    if approximate is not None:
+        options["approximate"] = approximate.label.capitalize()
+    options["none"] = "None (no indicators)"
+    choice = st.radio(
+        "Reference front",
+        list(options),
+        format_func=options.get,
+        horizontal=True,
+        key=f"new_run.reference_front.{problem.key}.{n_var}.{n_obj}",
+        help="What the run's quality indicators are measured against. The run keeps a copy of "
+        "the approximate front as it is now, so its values do not change when the front grows.",
+    )
+    contribute = st.checkbox(
+        "Add this run's solutions to the approximate reference front of this problem",
+        value=not exact,
+        key=f"new_run.contribute.{problem.key}.{n_var}.{n_obj}",
+        help="The approximate front of a problem, for these arguments, is the non-dominated union "
+        "of the runs added to it. Manage it in Explore › Problems.",
+    )
+    return choice, contribute
+
+
 problems = [entry for entry in problem_entries() if entry.available]
 st.subheader("1. Problem")
 problem = st.selectbox("Problem", problems, format_func=lambda item: item.label)
@@ -117,6 +149,14 @@ valid_problem = arguments is not None
 arguments = arguments if valid_problem else default_arguments(problem.key)
 details = problem_details(problem.key, arguments.get("n_obj"), arguments.get("n_var"))
 st.caption(f"{problem.description} {details.n_var} variables, {details.n_obj} objectives.")
+problem_kwargs = {
+    name: value
+    for name, value in arguments.items()
+    if name not in ("n_var", "n_obj") and value != default_arguments(problem.key)[name]
+}
+reference_choice, contribute = render_reference_front(
+    problem, details.n_var, details.n_obj, problem_kwargs
+)
 
 st.subheader("2. Algorithm")
 algorithms = [entry for entry in algorithm_entries() if problem.encoding in entry.encodings]
@@ -192,11 +232,9 @@ if st.button(
         pause_every=pause_every,
         n_obj=details.n_obj if len(problem.n_obj_options) > 1 else None,
         n_var=details.n_var,
-        problem_kwargs={
-            name: value
-            for name, value in arguments.items()
-            if name not in ("n_var", "n_obj") and value != default_arguments(problem.key)[name]
-        },
+        problem_kwargs=problem_kwargs,
+        reference_front=reference_choice,
+        contribute=contribute,
     )
     run = runs.launch(request, runs.runs_directory())
     ui.select_run(run)

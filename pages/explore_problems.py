@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from vamos_studio import charts
+from vamos_studio.backend import approximate_fronts, runs
 from vamos_studio.backend.catalogue import (
     ENCODING_LABELS,
     family_label,
@@ -14,6 +15,71 @@ from vamos_studio.backend.catalogue import (
     problem_entries,
 )
 from vamos_studio.problem_form import render_problem_arguments
+
+CONFIRM_DELETE = "explore_problems.confirm_delete"
+
+
+def arguments_text(arguments: dict) -> str:
+    return ", ".join(f"{name} = {value}" for name, value in arguments.items())
+
+
+def show_approximate_fronts(problem) -> None:
+    """The approximate fronts of a problem: view them, see their runs, download or delete them."""
+    st.markdown(
+        "An approximate reference front is the non-dominated union of the runs added to it, kept "
+        "for each set of arguments of the problem. Add runs in New run or in Results."
+    )
+    fronts = approximate_fronts.list_fronts(runs.runs_directory(), problem.key)
+    if not fronts:
+        st.info(f"{problem.label} has no approximate front yet.")
+        return
+    labels = {
+        index: f"{arguments_text(front.arguments)} · {front.label}"
+        for index, front in enumerate(fronts)
+    }
+    front = fronts[st.selectbox("Approximate front", list(labels), format_func=labels.get)]
+    st.plotly_chart(charts.front_figure(None, front.points), width="stretch")
+    if front.points.shape[1] == 3:
+        st.plotly_chart(charts.projections_figure(None, front.points), width="stretch")
+    st.dataframe(
+        pd.DataFrame(
+            [
+                {
+                    "Run": c.run_id,
+                    "Algorithm": c.algorithm,
+                    "Evaluations": c.evaluations,
+                    "Points": c.points,
+                    "Version": c.version,
+                    "Added": c.added_at,
+                }
+                for c in front.contributions
+            ]
+        ),
+        hide_index=True,
+    )
+    st.download_button(
+        "Download the front (CSV)",
+        "\n".join(",".join(f"{v:.10g}" for v in row) for row in front.points) + "\n",
+        file_name=f"{problem.key}-approximate-v{front.version}.csv",
+        mime="text/csv",
+        icon=":material/download:",
+    )
+    if st.button("Delete this approximate front…", key="ask_delete_front"):
+        st.session_state[CONFIRM_DELETE] = str(front.directory)
+    if st.session_state.get(CONFIRM_DELETE) == str(front.directory):
+        st.warning(
+            "Delete it for good? Runs measured against it keep their copy, but no new run can "
+            "use it."
+        )
+        yes, no = st.columns(2)
+        if yes.button("Yes, delete it", type="primary", key="confirm_delete_front"):
+            approximate_fronts.delete(front)
+            st.session_state[CONFIRM_DELETE] = None
+            st.rerun()
+        if no.button("Cancel", key="cancel_delete_front"):
+            st.session_state[CONFIRM_DELETE] = None
+            st.rerun()
+
 
 st.title("Problems")
 st.markdown("The problems of VAMOS, grouped by family.")
@@ -82,7 +148,9 @@ facts[0].metric("Variables", details.n_var)
 facts[1].metric("Objectives", details.n_obj)
 facts[2].metric("Encoding", ENCODING_LABELS.get(problem.encoding, problem.encoding))
 
-bounds_tab, front_tab = st.tabs(["Bounds", "Reference front"])
+bounds_tab, front_tab, approximate_tab = st.tabs(
+    ["Bounds", "Reference front", "Approximate fronts"]
+)
 with bounds_tab:
     st.dataframe(
         pd.DataFrame(
@@ -97,7 +165,10 @@ with bounds_tab:
 with front_tab:
     front = details.reference_front
     if front is None:
-        st.info("There is no reference front for this problem.")
+        st.info(
+            "There is no reference front for this problem. Runs added to its approximate front "
+            "make one: see the Approximate fronts tab."
+        )
     else:
         same_as_evolver = (
             ": the same file Evolver and Evolver-Studio use"
@@ -111,3 +182,5 @@ with front_tab:
         st.plotly_chart(charts.front_figure(None, front), width="stretch")
         if details.n_obj == 3:
             st.plotly_chart(charts.projections_figure(None, front), width="stretch")
+with approximate_tab:
+    show_approximate_fronts(problem)

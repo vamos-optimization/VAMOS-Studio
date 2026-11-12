@@ -11,8 +11,8 @@ import pandas as pd
 import streamlit as st
 
 from vamos_studio import charts, ui
-from vamos_studio.backend import runs
-from vamos_studio.backend.catalogue import problem_entry, reference_front, reference_front_source
+from vamos_studio.backend import approximate_fronts, runs
+from vamos_studio.backend.catalogue import problem_entry
 from vamos_studio.backend.indicators import available_indicators, compute_all
 from vamos_studio.backend.upstream.vamos_bridge import builtin_space
 from vamos_studio.configuration_form import changes
@@ -42,11 +42,12 @@ def show_front(front: np.ndarray, reference: np.ndarray | None, problem: str) ->
     st.dataframe(marked, hide_index=True)
 
 
-def show_indicators(
-    front: np.ndarray, reference: np.ndarray | None, problem: str, n_obj: int
-) -> None:
+def show_indicators(front: np.ndarray, reference: np.ndarray | None, label: str) -> None:
     if reference is None:
-        st.info("There is no reference front for this problem, so no indicator is computed.")
+        st.info(
+            "There is no reference front for this run, so no indicator is computed. Runs added to "
+            "the approximate front of its problem make one: see below and Explore › Problems."
+        )
         return
     values = compute_all(front, reference)
     st.dataframe(
@@ -63,9 +64,43 @@ def show_indicators(
         hide_index=True,
     )
     st.caption(
-        f"Measured on the front normalized with the reference front of {problem} "
-        f"({reference_front_source(problem, n_obj)}), as in Explore › Quality indicators."
+        f"Measured against {label}, with the front normalized by its bounds, as in "
+        "Explore › Quality indicators."
     )
+
+
+def current_approximate_front(
+    request: runs.SolveRequest,
+) -> approximate_fronts.ApproximateFront | None:
+    return approximate_fronts.load(
+        runs.runs_directory(), request.problem, runs.run_arguments(request)
+    )
+
+
+def newer_version_choice(
+    run: runs.SolveRun, request: runs.SolveRequest, reference, label: str
+) -> tuple:
+    """Offer to measure with the current approximate front, when it changed since launch."""
+    if request.reference_front != "approximate":
+        return reference, label
+    current = current_approximate_front(request)
+    snapshot = runs.read_json(run.directory / approximate_fronts.SNAPSHOT_METADATA_FILE) or {}
+    if current is None or current.version <= int(snapshot.get("version", 0)):
+        return reference, label
+    if st.toggle(f"Measure with the current {current.label}"):
+        return current.points, f"the current {current.label}"
+    return reference, label
+
+
+def show_contribution(run: runs.SolveRun) -> None:
+    """Whether the run is part of its problem's approximate front, or a button to add it."""
+    added = runs.contributed(run)
+    if added is not None:
+        st.caption(f"This run is part of the {added.label} of its problem.")
+        return
+    if st.button("Add this run to the approximate reference front", icon=":material/add_chart:"):
+        front = runs.contribute(run)
+        st.success(f"Added: the problem now has an {front.label}.")
 
 
 def show_solutions(front: np.ndarray, variables: np.ndarray, run_id: str) -> None:
@@ -150,7 +185,7 @@ if selection is not None:
 front, variables = runs.result_front(run, whole=whole)
 problem = problem_entry(request.problem)
 n_obj = ui.objectives_of(request)
-reference = reference_front(problem.key, n_obj)
+reference, reference_label = runs.reference_front_of(run)
 st.caption(
     f"{request.algorithm} on {problem.label} with {ui.variables_of(request)} variables and "
     f"{n_obj} objectives, seed {request.seed}"
@@ -161,8 +196,10 @@ front_tab, indicators_tab, solutions_tab, details_tab = st.tabs(
 )
 with front_tab:
     show_front(front, reference, problem.label)
+    show_contribution(run)
 with indicators_tab:
-    show_indicators(front, reference, problem.key, n_obj)
+    measured_with, measured_label = newer_version_choice(run, request, reference, reference_label)
+    show_indicators(front, measured_with, measured_label)
 with solutions_tab:
     show_solutions(front, variables, run.run_id)
 with details_tab:
