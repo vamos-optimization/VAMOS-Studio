@@ -72,15 +72,44 @@ SECTIONS = (
         ),
     ),
     Section(
-        "Solve",
+        "Optimize",
         (
             Page(
-                "pages/solve.py",
-                "Run algorithm",
+                "pages/new_run.py",
+                "New run",
                 "▶️",
-                "Choose a problem and an algorithm, start from its default configuration and "
-                "adjust it, run it with a live view of the front, and inspect the result.",
-                available=False,
+                "Choose a problem and an algorithm, adjust its configuration from the default one, "
+                "set the budget and launch the run in the background.",
+                available=True,
+            ),
+            Page(
+                "pages/monitor.py",
+                "Monitor",
+                "📡",
+                "Follow a run live, with its front as it evolves; stop it keeping what it found, "
+                "or cancel it.",
+                available=True,
+            ),
+            Page(
+                "pages/history.py",
+                "History",
+                "🗂️",
+                "Every run with its state, problem, algorithm and budget; open one in the monitor "
+                "or in the results.",
+                available=True,
+            ),
+        ),
+    ),
+    Section(
+        "Analyze",
+        (
+            Page(
+                "pages/results.py",
+                "Results",
+                "📈",
+                "The front a run found, with its knee and extremes, its quality indicators, its "
+                "solutions to download, and how VAMOS ran it.",
+                available=True,
             ),
         ),
     ),

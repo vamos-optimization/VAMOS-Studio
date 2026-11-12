@@ -52,9 +52,14 @@ class TestHomePage:
 
 class TestPages:
     @pytest.mark.parametrize("page", PAGES, ids=[page.title for page in PAGES])
-    def test_should_render_every_page_without_exceptions(self, page):
+    def test_should_render_every_page_without_exceptions(self, page, monkeypatch, tmp_path):
+        """Through the app's navigation, as a user opens it, with no runs yet."""
+        # Arrange
+        monkeypatch.setenv("VAMOS_STUDIO_RUNS", str(tmp_path))
+        app = AppTest.from_file(str(APP_SCRIPT), default_timeout=30).run()
+
         # Act
-        app = AppTest.from_file(str(ROOT / page.path), default_timeout=30).run()
+        app.switch_page(page.path).run()
 
         # Assert
         assert not app.exception
