@@ -4,15 +4,16 @@ A graphical front end and analysis tool for [VAMOS](https://github.com/vamos-opt
 a Python framework for multi-objective optimization. It is inspired by
 [Evolver-Studio](https://github.com/jMetal/Evolver), with VAMOS as its backend.
 
-> **Status:** first prototype (0.1.0.dev0): NSGA-II on the real-coded ZDT problems. The other
-> algorithms, encodings and problems are listed in the app as coming soon.
+> **Status:** first prototype (0.1.0.dev0): NSGA-II on the real-coded ZDT and DTLZ problems (DTLZ
+> with two or three objectives, drawn in 3D). The other algorithms, encodings and problems are
+> listed in the app as coming soon.
 
 ## What it does
 
 | Section | Page | |
 | --- | --- | --- |
 | **Explore** | **Algorithms** | The parameter space of each algorithm as a grammar: tree, table, default configuration and YAML |
-| | **Problems** | The problem families, with each problem's variables, bounds and reference front |
+| | **Problems** | The problem families, with each problem's variables, bounds and reference front (in 3D for three objectives) |
 | | **Quality indicators** | What each indicator measures, with a sandbox to see how they respond |
 | **Optimize** | **New run** | Choose a problem and an algorithm, adjust its configuration, set the budget and launch the run |
 | | **Monitor** | Follow a run live; stop it keeping its results, or cancel it |

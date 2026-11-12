@@ -37,6 +37,17 @@ Works with VAMOS 1.1.
   over the reference front), stop it keeping what it found, or cancel it; see why a run failed or
   was interrupted. With an external archive, the live front is the archive, which is what the run
   returns; otherwise, the non-dominated front of the population. The caption says which.
+- **DTLZ problems and fronts of three objectives**: DTLZ1–7 are available, with two or three
+  objectives (chosen in Explore › Problems, New run and the indicator sandbox; VAMOS derives the
+  number of variables). Fronts of three objectives are drawn in 3D, which can be rotated, and in
+  their three two-objective projections, as Transept draws them: the reference fronts, the live
+  front in the Monitor, the front of a run in Results and the sandbox of Explore › Quality
+  indicators. The sandbox spreads the points of a surface by farthest-point sampling. History and
+  the run selectors show the number of objectives of each run.
+- jMetal's DTLZ reference fronts, with two and three objectives, join the copy made by
+  `make sync-resources`. VAMOS 1.1 ships none with two objectives (it returns its three-objective
+  files), and its three-objective ones are up to 0.052 off the true fronts, with wrong bounds for
+  DTLZ6 and DTLZ7.
 - **Live view** (New run): a run can be slowed down to watch its front converge in the Monitor,
   pausing a chosen time every chosen number of generations, with an estimate of what the pauses
   add. The front is reported before each pause; the pauses change the runtime, never the results.
