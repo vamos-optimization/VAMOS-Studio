@@ -41,7 +41,8 @@ Works with VAMOS 1.1.
   add. The front is reported before each pause; the pauses change the runtime, never the results.
   The Monitor refreshes twice a second.
 - **Optimize › History**: every run with its state, problem, algorithm, budget and seed; open one
-  in the monitor or in the results.
+  in the monitor or in the results; delete runs, after confirming, to a trash from where they can
+  be restored, or empty it for good. Active runs cannot be deleted: cancel them first.
 - **Analyze › Results**: the front of a run with its knee and extremes, its quality indicators,
   its solutions (downloadable as FUN.csv and VAR.csv), and its details: evaluations, runtime,
   configuration, the specification VAMOS resolved, and a check of VAMOS's run artifact.
