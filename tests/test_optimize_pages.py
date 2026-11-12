@@ -226,3 +226,37 @@ class TestUnboundedArchiveResults:
         # Assert
         assert not app.exception
         assert any(c.value.startswith("The result: 100 of the") for c in app.caption)
+
+
+class TestProblemArguments:
+    def test_should_launch_a_problem_with_the_variables_set(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        app = open_page(NEW_RUN)
+        checkbox(app, "Set its arguments").check().run()
+        number_input(app, "Variables").set_value(10).run()
+        number_input(app, "Evaluations").set_value(2000).run()
+
+        # Act
+        next(b for b in app.button if b.label == "Launch the run").click().run()
+        run = runs.list_runs(tmp_path)[0]
+        wait_for_end(run)
+
+        # Assert
+        assert runs.read_request(run).n_var == 10
+        assert runs.result_front(run)[1].shape[1] == 10
+
+    def test_should_not_launch_with_invalid_arguments(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        app = open_page(NEW_RUN)
+        problem = next(box for box in app.selectbox if box.label == "Problem")
+        problem.select_index(problem.options.index("DTLZ2")).run()
+        checkbox(app, "Set its arguments").check().run()
+
+        # Act
+        number_input(app, "Variables").set_value(2).run()
+
+        # Assert
+        assert "DTLZ2 with 3 objectives needs at least 3 variables." in [e.value for e in app.error]
+        assert next(b for b in app.button if b.label == "Launch the run").disabled

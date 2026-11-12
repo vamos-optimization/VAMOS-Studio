@@ -118,3 +118,11 @@ class TestIndicatorsPage:
         values = {metric.label: metric.value for metric in app.metric}
         assert float(values["NHV ↓"]) < 0.01
         assert float(values["IGD+ ↓"]) < 0.01
+
+    def test_should_list_the_arguments_of_each_problem(self):
+        # Act
+        app = AppTest.from_file(PROBLEMS_PAGE, default_timeout=60).run()
+
+        # Assert
+        table = app.dataframe[1].value
+        assert table.loc[table["Problem"] == "ZDT1", "Arguments"].item() == "n_var: integer = 30"

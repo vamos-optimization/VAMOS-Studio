@@ -195,3 +195,14 @@ class TestObjectives:
         assert state == RunState.FINISHED
         assert front.shape[1] == n_obj
         assert variables.shape[1] == n_obj + 9
+
+    def test_should_solve_a_problem_with_the_variables_requested(self, tmp_path):
+        # Arrange
+        request = runs.SolveRequest.from_dict(make_request("zdt1", 2000).to_dict() | {"n_var": 7})
+
+        # Act
+        run = runs.launch(request, tmp_path)
+        wait_for_end(run)
+
+        # Assert
+        assert runs.result_front(run)[1].shape[1] == 7

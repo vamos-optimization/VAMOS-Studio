@@ -166,3 +166,56 @@ class TestReferenceFronts:
         # Assert
         assert details.reference_front_source == "jMetal 7.11"
         assert details.reference_front.shape == (1000, 2)
+
+
+class TestProblemArguments:
+    @pytest.mark.parametrize(
+        ("key", "expected"),
+        [
+            ("zdt1", [("n_var", "integer", 30)]),
+            ("dtlz2", [("n_var", "integer", 12), ("n_obj", "integer", 3)]),
+            (
+                "zcat1",
+                [
+                    ("n_var", "integer", 30),
+                    ("n_obj", "integer", 2),
+                    ("complicated_pareto_set", "boolean", False),
+                    ("level", "integer", 1),
+                    ("bias", "boolean", False),
+                    ("imbalance", "boolean", False),
+                ],
+            ),
+        ],
+    )
+    def test_should_read_the_arguments_of_vamos_constructors(self, key, expected):
+        # Act
+        arguments = catalogue.problem_arguments(key)
+
+        # Assert
+        assert [(a.name, a.type, a.default) for a in arguments] == expected
+
+    @pytest.mark.parametrize(
+        ("key", "arguments", "valid"),
+        [
+            ("zdt1", {"n_var": 2}, True),
+            ("zdt1", {"n_var": 1}, False),
+            ("dtlz2", {"n_var": 3, "n_obj": 3}, True),
+            ("dtlz2", {"n_var": 2, "n_obj": 3}, False),
+            ("dtlz2", {"n_var": 12, "n_obj": 5}, False),
+        ],
+    )
+    def test_should_check_the_arguments(self, key, arguments, valid):
+        # Act / Assert
+        assert (catalogue.argument_problems(key, arguments) == []) is valid
+
+    def test_should_build_a_problem_with_the_variables_set(self):
+        # Act
+        details = catalogue.problem_details("zdt1", n_var=8)
+
+        # Assert
+        assert details.n_var == 8 and len(details.upper) == 8
+
+    def test_should_refuse_to_build_a_problem_with_invalid_arguments(self):
+        # Act / Assert
+        with pytest.raises(ValueError, match="at least 3 variables"):
+            catalogue.problem_details("dtlz2", 3, 2)
