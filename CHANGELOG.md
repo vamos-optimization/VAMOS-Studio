@@ -37,6 +37,18 @@ Works with VAMOS 1.1.
   over the reference front), stop it keeping what it found, or cancel it; see why a run failed or
   was interrupted. With an external archive, the live front is the archive, which is what the run
   returns; otherwise, the non-dominated front of the population. The caption says which.
+- **Approximate reference fronts**, for problems without a known front (the binary knapsack,
+  QUBO and feature selection) or with arguments that change it, and for any other at the user's
+  choice. A run can add its non-dominated solutions (its whole archive) to the approximate front
+  of its problem, kept for each set of arguments: from New run (on by default when the problem has
+  no exact front) or later from Results. The front is the non-dominated union of the runs added,
+  at most 10,000 points (farthest-point selection keeps its extremes and spread), with a version
+  and the runs it comes from; runs ending at once do not lose each other's points. New run
+  chooses what a run is measured against: the exact front, the approximate one, or none. A run
+  measured against an approximate front keeps a copy of the version it was launched with, so its
+  values do not change as the front grows; Results says which version and can measure with the
+  current one. Explore › Problems shows each approximate front, in 2D or 3D, with its runs, to
+  download or delete.
 - **Binary encoding**: NSGA-II's grammar for binary problems (`nsgaii_binary`: uniform, HUX,
   one-point or two-point crossover and bit-flip or segment-inversion mutation), whose default
   configuration runs exactly as VAMOS's default for binary problems. ZDT5 and the binary
