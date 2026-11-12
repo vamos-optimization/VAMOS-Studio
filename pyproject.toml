@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,6 +7,8 @@ name = "vamos-studio"
 version = "0.1.0.dev0"
 description = "Streamlit GUI and analysis tool for VAMOS"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "vamos_studio/resources/LICENSE-jMetal.txt"]
 requires-python = ">=3.11"
 dependencies = [
     # The backend. Pinned to a minor series: the studio reads parts of VAMOS's catalogue that
