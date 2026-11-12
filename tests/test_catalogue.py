@@ -43,12 +43,14 @@ class TestProblems:
         # Act / Assert
         assert catalogue.family_of(key) == family
 
-    def test_should_make_only_the_real_coded_zdt_problems_available(self):
+    def test_should_make_only_the_real_coded_zdt_and_dtlz_problems_available(self):
         # Act
         available = {entry.key for entry in catalogue.problem_entries() if entry.available}
 
         # Assert
-        assert available == {"zdt1", "zdt2", "zdt3", "zdt4", "zdt6"}
+        assert available == {"zdt1", "zdt2", "zdt3", "zdt4", "zdt6"} | {
+            f"dtlz{number}" for number in range(1, 8)
+        }
 
     def test_should_list_zdt5_as_binary_and_inactive(self):
         # Act
@@ -101,11 +103,11 @@ class TestReferenceFronts:
     @pytest.mark.parametrize("key", sorted(ANALYTIC))
     def test_should_come_from_jmetal_for_the_zdt_problems(self, key):
         # Act / Assert
-        assert catalogue.reference_front_source(key) == "jMetal 7.11"
+        assert catalogue.reference_front_source(key, 2) == "jMetal 7.11"
 
     def test_should_fall_back_to_vamos_for_other_problems(self):
         # Act / Assert
-        assert catalogue.reference_front_source("dtlz2").startswith("VAMOS ")
+        assert catalogue.reference_front_source("wfg1", 2).startswith("VAMOS ")
 
     def test_should_report_where_the_front_of_a_problem_comes_from(self):
         # Act

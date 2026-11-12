@@ -42,7 +42,10 @@ ALGORITHM_LABELS: Final = {
     "spea2": "SPEA2",
 }
 # Problem families the studio supports, and the encoding it supports them for.
-SUPPORTED_PROBLEM_FAMILIES: Final = {"zdt": "real"}
+SUPPORTED_PROBLEM_FAMILIES: Final = {"zdt": "real", "dtlz": "real"}
+# Numbers of objectives the studio offers for problems that let you choose: those of the reference
+# fronts it copies from jMetal, and those its charts draw (2D and 3D).
+SUPPORTED_N_OBJ: Final = (2, 3)
 FAMILY_LABELS: Final = {
     "zdt": "ZDT",
     "dtlz": "DTLZ",
@@ -92,6 +95,8 @@ class ProblemEntry:
         n_var: Its default number of variables.
         n_obj: Its default number of objectives.
         available: Whether the studio supports it.
+        n_obj_options: The numbers of objectives the studio offers for it: its default one, or
+            `SUPPORTED_N_OBJ` when VAMOS lets you choose.
     """
 
     key: str
@@ -102,14 +107,17 @@ class ProblemEntry:
     n_var: int
     n_obj: int
     available: bool
+    n_obj_options: tuple[int, ...] = ()
 
 
 @dataclass(slots=True, frozen=True)
 class ProblemDetails:
-    """The bounds and the reference front of a problem, with its default dimensions.
+    """The dimensions, bounds and reference front of a problem with a number of objectives.
 
     Attributes:
         entry: The problem.
+        n_var: Its number of variables with `n_obj` objectives.
+        n_obj: The number of objectives.
         lower: The lower bound of each variable.
         upper: The upper bound of each variable.
         reference_front: Its reference front (see `reference_front`), or None.
@@ -117,6 +125,8 @@ class ProblemDetails:
     """
 
     entry: ProblemEntry
+    n_var: int
+    n_obj: int
     lower: NDArray[np.float64]
     upper: NDArray[np.float64]
     reference_front: NDArray[np.float64] | None
@@ -169,15 +179,24 @@ def problem_entry(key: str) -> ProblemEntry:
     raise KeyError(key)
 
 
-def problem_details(key: str) -> ProblemDetails:
-    """The bounds and reference front of the problem `key`, with its default dimensions."""
+def problem_details(key: str, n_obj: int | None = None) -> ProblemDetails:
+    """The problem `key` with `n_obj` objectives (its default when None).
+
+    Raises:
+        ValueError: If the problem does not allow that number of objectives.
+    """
     entry = problem_entry(key)
-    problem = vamos.make_problem_selection(key).instantiate()
-    lower = np.broadcast_to(np.asarray(problem.xl, dtype=float), (entry.n_var,))
-    upper = np.broadcast_to(np.asarray(problem.xu, dtype=float), (entry.n_var,))
-    front = reference_front(key, entry.n_obj)
-    source = reference_front_source(key) if front is not None else None
-    return ProblemDetails(entry, lower, upper, front, source)
+    n_obj = entry.n_obj if n_obj is None else n_obj
+    if entry.n_obj_options and n_obj not in entry.n_obj_options:
+        raise ValueError(f"{entry.label} cannot have {n_obj} objectives here.")
+    selection = vamos.make_problem_selection(key, n_obj=n_obj if n_obj != entry.n_obj else None)
+    n_var = int(selection.n_var)
+    problem = selection.instantiate()
+    lower = np.broadcast_to(np.asarray(problem.xl, dtype=float), (n_var,))
+    upper = np.broadcast_to(np.asarray(problem.xu, dtype=float), (n_var,))
+    front = reference_front(key, n_obj)
+    source = reference_front_source(key, n_obj) if front is not None else None
+    return ProblemDetails(entry, n_var, n_obj, lower, upper, front, source)
 
 
 def reference_front(key: str, n_obj: int) -> NDArray[np.float64] | None:
@@ -186,16 +205,16 @@ def reference_front(key: str, n_obj: int) -> NDArray[np.float64] | None:
     The studio's copy of jMetal's front comes first (see `bundled_resources`): VAMOS 1.1 ships
     inaccurate samples of some fronts. Otherwise, the one VAMOS ships.
     """
-    path = reference_front_file(key) or resolve_reference_front_path(key, None, n_obj=n_obj)
+    path = reference_front_file(key, n_obj) or resolve_reference_front_path(key, None, n_obj=n_obj)
     if path is None:
         return None
     front = np.loadtxt(path, delimiter=",", ndmin=2)
     return front if front.shape[1] == n_obj else None
 
 
-def reference_front_source(key: str) -> str:
-    """Where the reference front of `key` comes from: jMetal's copy or VAMOS."""
-    if reference_front_file(key) is not None:
+def reference_front_source(key: str, n_obj: int) -> str:
+    """Where the reference front of `key` with `n_obj` objectives comes from: jMetal or VAMOS."""
+    if reference_front_file(key, n_obj) is not None:
         return f"jMetal {JMETAL_VERSION}"
     return f"VAMOS {vamos_version_label()}"
 
@@ -219,4 +238,5 @@ def _problem_entry(key: str) -> ProblemEntry:
         n_var=int(selection.n_var),
         n_obj=int(selection.n_obj),
         available=SUPPORTED_PROBLEM_FAMILIES.get(family) == encoding,
+        n_obj_options=SUPPORTED_N_OBJ if spec.allow_n_obj_override else (int(selection.n_obj),),
     )

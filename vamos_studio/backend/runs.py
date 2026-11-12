@@ -80,6 +80,8 @@ class SolveRequest:
         pause_seconds: How long the worker pauses, to let the live view show the front
             converge; 0 runs at full speed. Pausing changes the runtime, never the results.
         pause_every: Every how many generations it pauses.
+        n_obj: The number of objectives, for a problem that lets you choose; None for its
+            default. VAMOS derives the number of variables from it.
     """
 
     problem: str
@@ -92,6 +94,7 @@ class SolveRequest:
     seed: int = 1
     pause_seconds: float = 0.0
     pause_every: int = 1
+    n_obj: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """The request as a JSON-ready mapping."""

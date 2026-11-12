@@ -25,6 +25,7 @@ def summary_table(candidates: list[runs.SolveRun]) -> pd.DataFrame:
                 "Run": run.run_id,
                 "State": runs.state(run).value,
                 "Problem": request.problem if request else "",
+                "Objectives": ui.objectives_of(request) if request else None,
                 "Algorithm": request.algorithm if request else "",
                 "Budget": request.max_evaluations if request else None,
                 "Evaluations": status.evaluations if status else None,

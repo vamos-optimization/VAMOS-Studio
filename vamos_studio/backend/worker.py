@@ -181,6 +181,7 @@ def solve(request: SolveRequest, progress: FileProgress) -> Any:
         algorithm_config=config,
         max_evaluations=request.max_evaluations,
         seed=request.seed,
+        n_obj=request.n_obj,
         live_viz=progress,
     )
 

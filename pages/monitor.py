@@ -7,10 +7,12 @@ import streamlit as st
 
 from vamos_studio import charts, ui
 from vamos_studio.backend import runs
-from vamos_studio.backend.catalogue import problem_entry, reference_front
+from vamos_studio.backend.catalogue import reference_front
 from vamos_studio.backend.runs import RunState
 
 REFRESH_SECONDS = 0.5
+# The reference front is drawn with at most this many points, so the live view refreshes quickly.
+MAX_REFERENCE_POINTS = 2000
 
 st.title("Monitor")
 
@@ -62,7 +64,10 @@ def show_run(run: runs.SolveRun) -> None:
     request = runs.read_request(run)
     status = runs.read_status(run)
     st.subheader(f"{run.run_id}: {state.value}")
-    st.caption(f"{request.algorithm} on {request.problem}, seed {request.seed}")
+    st.caption(
+        f"{request.algorithm} on {request.problem} with {ui.objectives_of(request)} objectives, "
+        f"seed {request.seed}"
+    )
     if request.pause_seconds > 0:
         st.caption(
             f"Slowed down for the live view: a pause of {request.pause_seconds:g} s every "
@@ -78,7 +83,9 @@ def show_run(run: runs.SolveRun) -> None:
         metrics[1].metric("Evaluations", f"{status.evaluations:,}")
         metrics[2].metric("Elapsed", f"{status.elapsed_seconds:.1f} s")
     front = runs.live_front(run)
-    reference = reference_front(request.problem, problem_entry(request.problem).n_obj)
+    reference = reference_front(request.problem, ui.objectives_of(request))
+    if reference is not None and len(reference) > MAX_REFERENCE_POINTS:
+        reference = reference[:: -(-len(reference) // MAX_REFERENCE_POINTS)]
     st.plotly_chart(charts.front_figure(front, reference), width="stretch")
     shown = (
         "The current external archive (what the run returns)"

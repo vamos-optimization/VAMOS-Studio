@@ -54,7 +54,7 @@ class TestProblemsPage:
         app = AppTest.from_file(PROBLEMS_PAGE, default_timeout=60).run()
 
         # Assert
-        assert app.selectbox[0].options == ["ZDT"]
+        assert app.selectbox[0].options == ["ZDT", "DTLZ"]
         assert "ZDT5" not in app.selectbox[1].options
 
 

@@ -3,9 +3,9 @@
 from collections import defaultdict
 
 import pandas as pd
-import plotly.express as px
 import streamlit as st
 
+from vamos_studio import charts
 from vamos_studio.backend.catalogue import (
     ENCODING_LABELS,
     family_label,
@@ -16,8 +16,9 @@ from vamos_studio.backend.catalogue import (
 st.title("Problems")
 st.markdown("The problems of VAMOS, grouped by family.")
 st.info(
-    "Prototype: only the **ZDT** family, for real-coded problems, is available. ZDT5 is "
-    "binary-coded, and the other families are listed but not active yet.",
+    "Prototype: the **ZDT** and **DTLZ** families, for real-coded problems, are available (DTLZ "
+    "with two or three objectives). ZDT5 is binary-coded, and the other families are listed but "
+    "not active yet.",
     icon=":material/construction:",
 )
 
@@ -67,12 +68,22 @@ st.dataframe(
 problem = st.selectbox(
     "Problem", [m for m in members if m.available], format_func=lambda item: item.label
 )
-details = problem_details(problem.key)
+n_obj = problem.n_obj
+if len(problem.n_obj_options) > 1:
+    n_obj = st.radio(
+        "Objectives",
+        problem.n_obj_options,
+        index=problem.n_obj_options.index(problem.n_obj),
+        horizontal=True,
+        help="VAMOS lets you choose the number of objectives of this problem; the studio offers "
+        "those it has reference fronts and charts for.",
+    )
+details = problem_details(problem.key, n_obj)
 st.subheader(problem.label)
 st.markdown(problem.description)
 facts = st.columns(3)
-facts[0].metric("Variables", problem.n_var)
-facts[1].metric("Objectives", problem.n_obj)
+facts[0].metric("Variables", details.n_var)
+facts[1].metric("Objectives", details.n_obj)
 facts[2].metric("Encoding", ENCODING_LABELS.get(problem.encoding, problem.encoding))
 
 bounds_tab, front_tab = st.tabs(["Bounds", "Reference front"])
@@ -80,7 +91,7 @@ with bounds_tab:
     st.dataframe(
         pd.DataFrame(
             {
-                "Variable": [f"x{i + 1}" for i in range(problem.n_var)],
+                "Variable": [f"x{i + 1}" for i in range(details.n_var)],
                 "Lower": details.lower,
                 "Upper": details.upper,
             }
@@ -90,12 +101,12 @@ with bounds_tab:
 with front_tab:
     front = details.reference_front
     if front is None:
-        st.info("VAMOS ships no reference front for this problem.")
+        st.info("There is no reference front for this problem.")
     else:
         st.caption(
             f"{len(front)} points, from {details.reference_front_source}: the same file Evolver "
             "and Evolver-Studio use. The studio measures fronts against it."
         )
-        figure = px.scatter(x=front[:, 0], y=front[:, 1], labels={"x": "f1", "y": "f2"})
-        figure.update_traces(marker={"size": 3})
-        st.plotly_chart(figure, width="stretch")
+        st.plotly_chart(charts.front_figure(None, front), width="stretch")
+        if details.n_obj == 3:
+            st.plotly_chart(charts.projections_figure(None, front), width="stretch")

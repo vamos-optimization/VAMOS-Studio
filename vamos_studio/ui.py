@@ -8,6 +8,7 @@ from __future__ import annotations
 import streamlit as st
 
 from vamos_studio.backend import runs
+from vamos_studio.backend.catalogue import problem_entry
 
 NEW_RUN = "pages/new_run.py"
 MONITOR = "pages/monitor.py"
@@ -53,5 +54,14 @@ def choose_run(label: str, candidates: list[runs.SolveRun]) -> runs.SolveRun | N
 def describe(run: runs.SolveRun) -> str:
     """A run in one line: its id, problem, algorithm and state."""
     request = runs.read_request(run)
-    what = f"{request.algorithm} on {request.problem}" if request else "no request"
+    what = (
+        f"{request.algorithm} on {request.problem} ({objectives_of(request)} obj.)"
+        if request
+        else "no request"
+    )
     return f"{run.run_id} · {what} · {runs.state(run).value}"
+
+
+def objectives_of(request: runs.SolveRequest) -> int:
+    """The number of objectives of a run: the one it asked for, or its problem's default."""
+    return request.n_obj or problem_entry(request.problem).n_obj

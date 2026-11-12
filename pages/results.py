@@ -31,6 +31,8 @@ def show_front(front: np.ndarray, reference: np.ndarray | None, problem: str) ->
     table = summarize(front)
     chosen = knee(table)
     st.plotly_chart(charts.front_figure(front, reference, chosen), width="stretch")
+    if front.shape[1] == 3:
+        st.plotly_chart(charts.projections_figure(front, reference, chosen), width="stretch")
     st.caption(
         f"{len(front)} non-dominated solutions, in blue, over the reference front of {problem}, "
         "in grey; the knee (closest to the ideal point, with each objective scaled over the "
@@ -40,7 +42,9 @@ def show_front(front: np.ndarray, reference: np.ndarray | None, problem: str) ->
     st.dataframe(marked, hide_index=True)
 
 
-def show_indicators(front: np.ndarray, reference: np.ndarray | None, problem: str) -> None:
+def show_indicators(
+    front: np.ndarray, reference: np.ndarray | None, problem: str, n_obj: int
+) -> None:
     if reference is None:
         st.info("There is no reference front for this problem, so no indicator is computed.")
         return
@@ -60,7 +64,7 @@ def show_indicators(front: np.ndarray, reference: np.ndarray | None, problem: st
     )
     st.caption(
         f"Measured on the front normalized with the reference front of {problem} "
-        f"({reference_front_source(problem)}), as in Explore › Quality indicators."
+        f"({reference_front_source(problem, n_obj)}), as in Explore › Quality indicators."
     )
 
 
@@ -133,8 +137,9 @@ if run is None:
 request = runs.read_request(run)
 front, variables = runs.result_front(run)
 problem = problem_entry(request.problem)
-reference = reference_front(problem.key, problem.n_obj)
-st.caption(f"{request.algorithm} on {problem.label}, seed {request.seed}")
+n_obj = ui.objectives_of(request)
+reference = reference_front(problem.key, n_obj)
+st.caption(f"{request.algorithm} on {problem.label} with {n_obj} objectives, seed {request.seed}")
 
 front_tab, indicators_tab, solutions_tab, details_tab = st.tabs(
     ["Front", "Indicators", "Solutions", "Details"]
@@ -142,7 +147,7 @@ front_tab, indicators_tab, solutions_tab, details_tab = st.tabs(
 with front_tab:
     show_front(front, reference, problem.label)
 with indicators_tab:
-    show_indicators(front, reference, problem.key)
+    show_indicators(front, reference, problem.key, n_obj)
 with solutions_tab:
     show_solutions(front, variables, run.run_id)
 with details_tab:

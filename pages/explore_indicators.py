@@ -1,9 +1,9 @@
 """Explore › Quality indicators: VAMOS's indicators, what each one measures, and a sandbox."""
 
 import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
 
+from vamos_studio import charts
 from vamos_studio.backend.catalogue import (
     problem_entries,
     reference_front,
@@ -11,10 +11,6 @@ from vamos_studio.backend.catalogue import (
 )
 from vamos_studio.backend.indicators import INDICATORS, available_indicators, compute_all
 from vamos_studio.front_sample import sample_front
-
-# Transept's palette (transept/charts.py): the background points in grey, the front in blue.
-REFERENCE_COLOUR = "#b7bcc5"
-APPROXIMATION_COLOUR = "#1769aa"
 
 st.title("Quality indicators")
 st.markdown(
@@ -26,8 +22,9 @@ st.markdown(
     "front. VAMOS computes them all, with moocore."
 )
 st.info(
-    "Prototype: the indicators that compare whole fronts on two-objective problems are "
-    "available. The others are listed with the reason they are not active yet.",
+    "Prototype: the indicators that compare whole fronts are available, on the ZDT and DTLZ "
+    "problems (two or three objectives). The others are listed with the reason they are not "
+    "active yet.",
     icon=":material/construction:",
 )
 
@@ -54,10 +51,16 @@ st.markdown(
     "indicator responds. With all the points and no shift, every distance indicator is 0."
 )
 problems = [entry for entry in problem_entries() if entry.available]
-controls = st.columns(3)
+controls = st.columns([3, 1, 2, 2])
 problem = controls[0].selectbox("Problem", problems, format_func=lambda item: item.label)
-n_points = controls[1].slider("Points", min_value=2, max_value=200, value=20)
-shift = controls[2].slider(
+n_obj = controls[1].selectbox(
+    "Objectives",
+    problem.n_obj_options,
+    index=problem.n_obj_options.index(problem.n_obj),
+    disabled=len(problem.n_obj_options) == 1,
+)
+n_points = controls[2].slider("Points", min_value=2, max_value=200, value=20)
+shift = controls[3].slider(
     "Shift (fraction of each objective's range)",
     min_value=0.0,
     max_value=0.2,
@@ -66,7 +69,7 @@ shift = controls[2].slider(
     format="%.3f",
 )
 
-front = reference_front(problem.key, problem.n_obj)
+front = reference_front(problem.key, n_obj)
 approximation = sample_front(front, n_points, shift)
 values = compute_all(approximation, front)
 
@@ -75,31 +78,12 @@ for column, entry in zip(metrics, available_indicators()):
     arrow = "↑" if entry.maximized else "↓"
     column.metric(f"{entry.short_name} {arrow}", f"{values[entry.key]:.4f}")
 
-figure = go.Figure()
-figure.add_trace(
-    go.Scatter(
-        x=front[:, 0],
-        y=front[:, 1],
-        mode="markers",
-        name="Reference front",
-        marker={"size": 3, "color": REFERENCE_COLOUR},
-    )
+st.plotly_chart(
+    charts.front_figure(approximation, front, front_label="Approximation"), width="stretch"
 )
-figure.add_trace(
-    go.Scatter(
-        x=approximation[:, 0],
-        y=approximation[:, 1],
-        mode="markers",
-        name="Approximation",
-        marker={"size": 8, "color": APPROXIMATION_COLOUR},
-    )
-)
-figure.update_layout(xaxis_title="f1", yaxis_title="f2", legend={"orientation": "h"})
-st.plotly_chart(figure, width="stretch")
-
 st.caption(
-    f"Reference front: {len(front)} points from {reference_front_source(problem.key)}, the same "
-    "file Evolver-Studio uses, so the values match its."
+    f"Reference front: {len(front)} points from {reference_front_source(problem.key, n_obj)}, "
+    "the same file Evolver-Studio uses, so the values match its."
 )
 
 with st.expander("Values as a table"):

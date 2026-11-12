@@ -35,8 +35,10 @@ class TestPaths:
 
     def test_should_find_the_front_of_a_supported_problem_only(self):
         # Act / Assert
-        assert reference_front_file("zdt4").name == "ZDT4.csv"
-        assert reference_front_file("dtlz2") is None
+        assert reference_front_file("zdt4", 2).name == "ZDT4.csv"
+        assert reference_front_file("dtlz2", 3).name == "DTLZ2.3D.csv"
+        assert reference_front_file("dtlz2", 2).name == "DTLZ2.2D.csv"
+        assert reference_front_file("wfg1", 2) is None
 
 
 class TestManifest:

@@ -23,7 +23,12 @@ MANIFEST_FILE: Final = RESOURCES_DIRECTORY / "SHA256SUMS"
 LICENSE_FILE: Final = "LICENSE-jMetal.txt"
 # Files copied from jMetal, as paths relative to its repository root and to RESOURCES_DIRECTORY.
 COPIED_FILES: Final = tuple(
-    f"resources/referenceFronts/ZDT{number}.csv" for number in (1, 2, 3, 4, 6)
+    [f"resources/referenceFronts/ZDT{number}.csv" for number in (1, 2, 3, 4, 6)]
+    + [
+        f"resources/referenceFronts/DTLZ{number}.{n_obj}D.csv"
+        for number in range(1, 8)
+        for n_obj in (2, 3)
+    ]
 )
 
 
@@ -80,7 +85,14 @@ def write_manifest(
     return len(names)
 
 
-def reference_front_file(problem: str) -> Path | None:
-    """The copied jMetal reference front of a problem (e.g. "zdt4"), if the studio has one."""
-    path = RESOURCES_DIRECTORY / "referenceFronts" / f"{problem.upper()}.csv"
-    return path if path.is_file() else None
+def reference_front_file(problem: str, n_obj: int) -> Path | None:
+    """The copied jMetal reference front of a problem with `n_obj` objectives, if there is one.
+
+    jMetal names the fronts of problems with a fixed number of objectives after the problem
+    ("ZDT4.csv") and the others after the number too ("DTLZ2.3D.csv").
+    """
+    directory = RESOURCES_DIRECTORY / "referenceFronts"
+    for name in (f"{problem.upper()}.{n_obj}D.csv", f"{problem.upper()}.csv"):
+        if (directory / name).is_file():
+            return directory / name
+    return None

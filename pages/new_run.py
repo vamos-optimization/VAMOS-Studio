@@ -8,7 +8,7 @@ import streamlit as st
 
 from vamos_studio import ui
 from vamos_studio.backend import runs
-from vamos_studio.backend.catalogue import algorithm_entries, problem_entries
+from vamos_studio.backend.catalogue import algorithm_entries, problem_details, problem_entries
 from vamos_studio.backend.upstream.parameter_space import Parameter, ParameterSpace
 from vamos_studio.backend.upstream.vamos_bridge import builtin_space
 from vamos_studio.configuration_form import active_fields, changes, configuration_of
@@ -105,8 +105,17 @@ def render_configuration(space: ParameterSpace):
 
 problems = [entry for entry in problem_entries() if entry.available]
 st.subheader("1. Problem")
-problem = st.selectbox("Problem", problems, format_func=lambda item: item.label)
-st.caption(f"{problem.description} {problem.n_var} variables, {problem.n_obj} objectives.")
+left, right = st.columns([3, 1])
+problem = left.selectbox("Problem", problems, format_func=lambda item: item.label)
+n_obj = right.selectbox(
+    "Objectives",
+    problem.n_obj_options,
+    index=problem.n_obj_options.index(problem.n_obj),
+    disabled=len(problem.n_obj_options) == 1,
+    help="DTLZ problems can have two or three objectives; the others have a fixed number.",
+)
+details = problem_details(problem.key, n_obj)
+st.caption(f"{problem.description} {details.n_var} variables, {details.n_obj} objectives.")
 
 st.subheader("2. Algorithm")
 algorithms = [entry for entry in algorithm_entries() if problem.encoding in entry.encodings]
@@ -174,6 +183,7 @@ if st.button("Launch the run", type="primary", icon=":material/play_arrow:"):
         seed=int(seed),
         pause_seconds=pause_seconds,
         pause_every=pause_every,
+        n_obj=details.n_obj if len(problem.n_obj_options) > 1 else None,
     )
     run = runs.launch(request, runs.runs_directory())
     ui.select_run(run)
