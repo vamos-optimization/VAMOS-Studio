@@ -253,6 +253,27 @@ These are the changes needed:
 | M5 | Operator rates such as `crossover_prob`, `mutation_prob_factor` and `mutation_eta` are top-level parameters | Make them global sub-parameters of their operator node, so they travel with it in a subtree crossover | Recommended |
 | M6 | The vocabulary differs from the configuration objects (`polynomial` in the space against `pm` in `MOEADConfig`'s default) | Use a single name for each operator in VAMOS | Every algorithm |
 
+### 7.1 First grammar: `nsgaii_real` (VAMOS 1.1.0)
+
+The first grammar, `vamos_studio/backend/upstream/spaces/nsgaii_real.yaml`, applies M1–M5 to
+VAMOS 1.1.0's `build_nsgaii_config_space()`. It has 35 parameters, 8 of them top-level and 13
+active by default. What it showed:
+
+- **M3 needs no new values here.** With the same seed, `initializer: random` and `repair: clip`
+  give exactly the same front as VAMOS's automatic defaults, so they are the defaults. A test
+  checks it on ZDT1 and ZDT4.
+- **G7 has to compare runs, not dictionaries.** `NSGAIIConfig.default()` and the configuration
+  built from the grammar's defaults are written differently but run identically. For example,
+  `("pm", {"prob": 1/n})` is the same as `polynomial` with `mutation_prob_factor: 1.0`, and an
+  implicit tournament size is the same as `selection_size: 2`. The test runs both with one seed
+  and compares the fronts.
+- **M4:** the operators' own default arguments in VAMOS give a default to every parameter except
+  two, which are marked PROVISIONAL: `gaussian_sigma` (no default in VAMOS) and
+  `scatter_base_size_factor` (VAMOS uses 0.25, which is not one of the choices).
+- **Defaults and ranges change between VAMOS versions.** In 1.1.0 the SBX probability defaults to
+  1.0, whereas `main` uses 0.9, and `simplex_epsilon` ranges over [0.1, 1.0]. The pinned VAMOS
+  series and the drift-detection tests (`tests/test_nsgaii_grammar.py`) catch such changes.
+
 ## 8. Plan
 
 - **VAMOS-Studio (now).** `vamos_studio/backend/upstream/parameter_space.py` implements the

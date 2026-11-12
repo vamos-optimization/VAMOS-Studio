@@ -9,4 +9,6 @@ Status values: **local** (used only here), **proposed** (issue or pull request o
 
 | Local module | Target in VAMOS | Purpose | Status | VAMOS issue/PR |
 | --- | --- | --- | --- | --- |
-| `parameter_space.py` (planned) | `vamos.algorithms.parameter_space`, schemas `vamos.parameter-space` and `vamos.parameter-configuration` | Parameter spaces as grammars, with defaults, validation and configurations ([design](docs/design/parameter-spaces.md)) | local (planned) | — |
+| `parameter_space.py` | `vamos.algorithms.parameter_space`, schemas `vamos.parameter-space` and `vamos.parameter-configuration` | Parameter spaces as grammars and configurations as derivations: model, validator (G1–G5), YAML, hashes ([design](docs/design/parameter-spaces.md)) | local | — |
+| `vamos_bridge.py` | Per-algorithm configuration builders of `vamos.algorithms` | From a configuration to a VAMOS algorithm configuration, undoing the renames M1 and M2 | local | — |
+| `spaces/nsgaii_real.yaml` | Grammars shipped as VAMOS resources | NSGA-II for real-coded problems, with M1–M5 applied | local | — |
