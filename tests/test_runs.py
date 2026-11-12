@@ -176,3 +176,22 @@ class TestProblems:
 
         # Assert
         assert listed == ["20260301-000000", "20260201-000000", "20260101-000000"]
+
+
+class TestObjectives:
+    @pytest.mark.parametrize("n_obj", [2, 3])
+    def test_should_solve_dtlz2_with_the_requested_objectives(self, tmp_path, n_obj):
+        # Arrange
+        request = runs.SolveRequest.from_dict(
+            make_request("dtlz2", 2000).to_dict() | {"n_obj": n_obj}
+        )
+
+        # Act
+        run = runs.launch(request, tmp_path)
+        state = wait_for_end(run)
+
+        # Assert
+        front, variables = runs.result_front(run)
+        assert state == RunState.FINISHED
+        assert front.shape[1] == n_obj
+        assert variables.shape[1] == n_obj + 9

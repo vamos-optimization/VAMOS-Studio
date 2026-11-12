@@ -166,3 +166,27 @@ class TestMonitorHistoryResults:
         # Assert
         assert not app.exception
         assert "No run has results yet." in [info.value for info in app.info]
+
+
+class TestThreeObjectives:
+    def test_should_launch_dtlz2_with_three_objectives_and_show_its_results(
+        self, tmp_path, monkeypatch
+    ):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        app = open_page(NEW_RUN)
+        problem = next(box for box in app.selectbox if box.label == "Problem")
+        problem.select_index(problem.options.index("DTLZ2")).run()
+        number_input(app, "Evaluations").set_value(2000).run()
+
+        # Act
+        next(b for b in app.button if b.label == "Launch the run").click().run()
+        run = runs.list_runs(tmp_path)[0]
+        wait_for_end(run)
+        results = open_page(RESULTS)
+
+        # Assert
+        assert runs.read_request(run).n_obj == 3
+        assert not results.exception
+        assert any("with 3 objectives" in c.value for c in results.caption)
+        assert results.dataframe[0].value.columns[:4].tolist() == ["solution", "f1", "f2", "f3"]

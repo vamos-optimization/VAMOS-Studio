@@ -52,6 +52,25 @@ class TestProblems:
             f"dtlz{number}" for number in range(1, 8)
         }
 
+    def test_should_offer_two_or_three_objectives_for_dtlz_only(self):
+        # Act / Assert
+        assert catalogue.problem_entry("dtlz2").n_obj_options == (2, 3)
+        assert catalogue.problem_entry("zdt1").n_obj_options == (2,)
+
+    @pytest.mark.parametrize(("n_obj", "n_var"), [(2, 11), (3, 12)])
+    def test_should_derive_the_variables_of_dtlz2_from_its_objectives(self, n_obj, n_var):
+        # Act
+        details = catalogue.problem_details("dtlz2", n_obj)
+
+        # Assert
+        assert (details.n_var, details.n_obj, len(details.lower)) == (n_var, n_obj, n_var)
+        assert details.reference_front.shape[1] == n_obj
+
+    def test_should_refuse_a_number_of_objectives_it_does_not_offer(self):
+        # Act / Assert
+        with pytest.raises(ValueError):
+            catalogue.problem_details("dtlz2", 5)
+
     def test_should_list_zdt5_as_binary_and_inactive(self):
         # Act
         entry = catalogue.problem_entry("zdt5")
@@ -108,6 +127,37 @@ class TestReferenceFronts:
     def test_should_fall_back_to_vamos_for_other_problems(self):
         # Act / Assert
         assert catalogue.reference_front_source("wfg1", 2).startswith("VAMOS ")
+
+    DTLZ_SURFACES = {
+        "dtlz1": lambda front: front.sum(axis=1) - 0.5,
+        "dtlz2": lambda front: np.linalg.norm(front, axis=1) - 1,
+        "dtlz3": lambda front: np.linalg.norm(front, axis=1) - 1,
+        "dtlz4": lambda front: np.linalg.norm(front, axis=1) - 1,
+    }
+
+    @pytest.mark.parametrize("n_obj", [2, 3])
+    @pytest.mark.parametrize("key", sorted(DTLZ_SURFACES))
+    def test_should_lie_on_the_dtlz_surfaces(self, key, n_obj):
+        """DTLZ1's front is the plane sum(f) = 0.5; DTLZ2-4's, the unit sphere."""
+        # Arrange
+        front = catalogue.reference_front(key, n_obj)
+
+        # Act
+        deviation = np.max(np.abs(self.DTLZ_SURFACES[key](front)))
+
+        # Assert
+        assert front.shape[1] == n_obj
+        assert deviation < 1e-6
+        assert catalogue.reference_front_source(key, n_obj) == "jMetal 7.11"
+
+    @pytest.mark.parametrize("n_obj", [2, 3])
+    @pytest.mark.parametrize("number", range(1, 8))
+    def test_should_have_a_front_for_every_dtlz_problem(self, number, n_obj):
+        # Act
+        front = catalogue.reference_front(f"dtlz{number}", n_obj)
+
+        # Assert
+        assert front is not None and front.shape[1] == n_obj
 
     def test_should_report_where_the_front_of_a_problem_comes_from(self):
         # Act

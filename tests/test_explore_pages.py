@@ -57,6 +57,20 @@ class TestProblemsPage:
         assert app.selectbox[0].options == ["ZDT", "DTLZ"]
         assert "ZDT5" not in app.selectbox[1].options
 
+    @pytest.mark.parametrize("n_obj", [2, 3])
+    def test_should_show_dtlz2_with_the_chosen_objectives(self, n_obj):
+        # Arrange
+        app = AppTest.from_file(PROBLEMS_PAGE, default_timeout=60).run()
+        app.selectbox[0].select_index(1).run()
+        app.selectbox[1].select_index(app.selectbox[1].options.index("DTLZ2")).run()
+
+        # Act
+        app.radio[0].set_value(n_obj).run()
+
+        # Assert
+        assert not app.exception
+        assert [m.value for m in app.metric][:2] == [str(n_obj + 9), str(n_obj)]
+
 
 INDICATORS_PAGE = str(ROOT / "pages" / "explore_indicators.py")
 
