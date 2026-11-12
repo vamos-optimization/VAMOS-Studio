@@ -135,7 +135,17 @@ if run is None:
     st.stop()
 
 request = runs.read_request(run)
-front, variables = runs.result_front(run)
+selection = runs.read_selection(run)
+whole = False
+if selection is not None:
+    st.info(
+        f"The run kept every non-dominated solution in an unbounded archive "
+        f"({selection.archive_size:,}); its result is the {len(selection.indices)} of them chosen "
+        f"by `{selection.method}` subset selection.",
+        icon=":material/filter_alt:",
+    )
+    whole = st.toggle(f"Show the whole archive ({selection.archive_size:,} solutions)")
+front, variables = runs.result_front(run, whole=whole)
 problem = problem_entry(request.problem)
 n_obj = ui.objectives_of(request)
 reference = reference_front(problem.key, n_obj)

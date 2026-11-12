@@ -23,6 +23,8 @@ SPACES_PACKAGE: Final = "vamos_studio.backend.upstream.spaces"
 # Grammars shipped with the studio, as (algorithm, encoding).
 BUILTIN_SPACES: Final = (("nsgaii", "real"),)
 
+# Parameters of the grammars that VAMOS does not have: the studio applies them itself.
+STUDIO_ONLY_PARAMETERS: Final = frozenset({"archive_subset_selection"})
 # M2: parameters duplicated per production, and the single VAMOS parameter they come from.
 _RENAMED_TO_VAMOS: Final = {
     "polynomial_eta": "mutation_eta",
@@ -55,6 +57,8 @@ def to_vamos_assignment(configuration: Configuration) -> dict[str, Any]:
     """
     assignment: dict[str, Any] = {}
     for name, value in configuration.values.items():
+        if name in STUDIO_ONLY_PARAMETERS:
+            continue
         if name == "external_archive":
             assignment.update(_archive_assignment(str(value)))
         else:

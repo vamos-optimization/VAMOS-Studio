@@ -37,6 +37,7 @@ STOP_FILE: Final = "stop"
 CANCELLED_FILE: Final = "cancelled"
 LIVE_FRONT_FILE: Final = "live_front.csv"
 ARTIFACT_DIRECTORY: Final = "run"
+SELECTION_FILE: Final = "selection.json"
 WORKER_MODULE: Final = "vamos_studio.backend.worker"
 TRASH_DIRECTORY: Final = "trash"
 TRASH_MANIFEST: Final = "trash.json"
@@ -119,7 +120,9 @@ class RunStatus:
         paused_seconds: How much of that time the worker spent pausing for the live view.
         ended_by: What ended a run that is over: "evaluations" or "user".
         live_source: What the live front shows: the population's non-dominated front
-            ("population") or the external archive ("archive").
+            ("population"), the external archive ("archive"), or a subset of an unbounded
+            archive as large as the population ("archive_subset").
+        archive_size: How many solutions the external archive holds, if the run keeps one.
         error: Why the run failed, if it did.
     """
 
@@ -131,6 +134,7 @@ class RunStatus:
     paused_seconds: float = 0.0
     ended_by: str | None = None
     live_source: str = "population"
+    archive_size: int | None = None
     error: str | None = None
 
     @property
@@ -307,8 +311,40 @@ def live_front(run: SolveRun) -> NDArray[np.float64] | None:
         return None
 
 
-def result_front(run: SolveRun) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-    """The non-dominated solutions a run found: their objectives and their variables.
+@dataclass(slots=True, frozen=True)
+class Selection:
+    """The subset of an unbounded archive a run returns (see vamos_studio/backend/subset.py).
+
+    Attributes:
+        method: The subset selection used.
+        size: How many solutions it keeps: the population size.
+        archive_size: How many non-dominated solutions the archive had.
+        indices: The rows of the archive's non-dominated front it keeps.
+    """
+
+    method: str
+    size: int
+    archive_size: int
+    indices: tuple[int, ...]
+
+
+def read_selection(run: SolveRun) -> Selection | None:
+    """The subset a run returns from its unbounded archive, or None if it returns everything."""
+    values = read_json(run.directory / SELECTION_FILE)
+    if not values:
+        return None
+    return Selection(
+        values["method"], values["size"], values["archive_size"], tuple(values["indices"])
+    )
+
+
+def result_front(
+    run: SolveRun, whole: bool = False
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """The solutions a run returns: their objectives and their variables.
+
+    They are the non-dominated solutions it found, or, when it selected a subset of an unbounded
+    archive, that subset; `whole` gives the whole archive instead.
 
     Raises:
         FileNotFoundError: If the run left no run artifact.
@@ -317,7 +353,12 @@ def result_front(run: SolveRun) -> tuple[NDArray[np.float64], NDArray[np.float64
         raise FileNotFoundError(f"Run {run.run_id} has no results.")
     result = vamos.load_result(run.artifact)
     front, indices = result.front(return_indices=True)
-    return np.asarray(front, dtype=float), np.asarray(result.X)[indices]
+    front, variables = np.asarray(front, dtype=float), np.asarray(result.X)[indices]
+    selection = None if whole else read_selection(run)
+    if selection is not None:
+        kept = np.asarray(selection.indices, dtype=int)
+        front, variables = front[kept], variables[kept]
+    return front, variables
 
 
 def manifest(run: SolveRun) -> dict[str, Any] | None:

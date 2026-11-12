@@ -59,6 +59,29 @@ def show_outcome(run: runs.SolveRun, state: RunState) -> None:
             st.code(log, language=None)
 
 
+def live_front_caption(
+    status: runs.RunStatus | None, state: RunState, request: runs.SolveRequest
+) -> str:
+    """What the live front is: the population's front, the archive, or a subset of it."""
+    source = status.live_source if status is not None else "population"
+    if source == "archive":
+        return "The current external archive (what the run returns)"
+    if source != "archive_subset":
+        return "The current non-dominated front of the population"
+    size = f"{status.archive_size:,}" if status.archive_size is not None else "?"
+    method = request.configuration.get("archive_subset_selection", "")
+    if state.active and method != "farthest":
+        return (
+            f"A preview of the result: {request.configuration['pop_size']} of the {size} "
+            f"solutions of the unbounded archive, chosen by farthest-point selection (the "
+            f"result will use `{method}`)"
+        )
+    return (
+        f"The result: {request.configuration['pop_size']} of the {size} solutions of the "
+        f"unbounded archive, chosen by `{method}`"
+    )
+
+
 def show_run(run: runs.SolveRun) -> None:
     state = runs.state(run)
     request = runs.read_request(run)
@@ -87,12 +110,7 @@ def show_run(run: runs.SolveRun) -> None:
     if reference is not None and len(reference) > MAX_REFERENCE_POINTS:
         reference = reference[:: -(-len(reference) // MAX_REFERENCE_POINTS)]
     st.plotly_chart(charts.front_figure(front, reference), width="stretch")
-    shown = (
-        "The current external archive (what the run returns)"
-        if status is not None and status.live_source == "archive"
-        else "The current non-dominated front of the population"
-    )
-    st.caption(f"{shown}, in blue, over the reference front, in grey.")
+    st.caption(f"{live_front_caption(status, state, request)}, in blue, over the reference front.")
     if state.active:
         run_controls(run)
     else:

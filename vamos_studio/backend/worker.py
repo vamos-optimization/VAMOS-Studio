@@ -18,8 +18,10 @@ from typing import Any, Final
 import numpy as np
 import vamos
 
+from . import subset
 from .runs import (
     LIVE_FRONT_FILE,
+    SELECTION_FILE,
     STATUS_FILE,
     STOP_FILE,
     SolveRequest,
@@ -33,6 +35,10 @@ from .upstream.vamos_bridge import builtin_space, to_algorithm_config
 MIN_WRITE_INTERVAL_SECONDS: Final = 0.5
 # A pause is slept in slices this long, so that a stop or a cancellation is noticed quickly.
 PAUSE_SLICE_SECONDS: Final = 0.05
+# The subset of an unbounded archive shown while the run goes on: farthest-point selection takes
+# milliseconds even on thousands of solutions, so the run is not slowed down. The final live front
+# is the run's own selection, whatever its method.
+LIVE_SUBSET_METHOD: Final = "farthest"
 
 
 class FileProgress:
@@ -45,7 +51,9 @@ class FileProgress:
     results are the same as without pauses.
 
     The live front is the non-dominated front of the population, or the external archive when
-    the algorithm keeps one (`live_source` "archive"): the archive is what the run returns.
+    the algorithm keeps one (`live_source` "archive"): the archive is what the run returns. From
+    an unbounded archive whose result is a subset (`subset_size`), it is a subset of the same size
+    (`live_source` "archive_subset"), chosen by `LIVE_SUBSET_METHOD` while the run goes on.
     """
 
     def __init__(
@@ -66,6 +74,8 @@ class FileProgress:
         self.stopped = False
         self.paused_seconds = 0.0
         self.live_source = "population"
+        self.subset_size: int | None = None
+        self.archive_size: int | None = None
         self._started = time.monotonic()
         self._last_write = float("-inf")
         self._front: np.ndarray | None = None
@@ -86,8 +96,8 @@ class FileProgress:
         if evaluations is not None:
             self.evaluations = int(evaluations)
         archive = (stats or {}).get("archive")
-        if self.live_source == "archive" and archive is not None:
-            self._front = np.asarray(archive["F"], dtype=float)
+        if self.live_source != "population" and archive is not None:
+            self._front = self._shown_part_of(np.asarray(archive["F"], dtype=float))
         elif F is not None:
             self._front = np.asarray(F, dtype=float)
         if self._pauses_now():
@@ -98,6 +108,18 @@ class FileProgress:
 
     def on_end(self, final_F: Any = None, final_stats: dict[str, Any] | None = None) -> None:
         return None
+
+    def _shown_part_of(self, archive: np.ndarray) -> np.ndarray:
+        """The archive, or the subset of it shown when the result is a subset."""
+        self.archive_size = len(archive)
+        if self.subset_size is None or len(archive) <= self.subset_size:
+            return archive
+        return archive[subset.select(LIVE_SUBSET_METHOD, archive, self.subset_size)]
+
+    def show_final(self, front: np.ndarray, archive_size: int) -> None:
+        """Make `front`, the run's result, the live front written at the end."""
+        self._front = front
+        self.archive_size = archive_size
 
     def should_stop(self) -> bool:
         if (self.directory / STOP_FILE).is_file():
@@ -144,6 +166,7 @@ class FileProgress:
                 "paused_seconds": round(self.paused_seconds, 3),
                 "ended_by": ended_by,
                 "live_source": self.live_source,
+                "archive_size": self.archive_size,
                 "error": error,
             },
         )
@@ -175,6 +198,9 @@ def solve(request: SolveRequest, progress: FileProgress) -> Any:
     config = with_live_archive(to_algorithm_config(space.configuration(request.configuration)))
     if getattr(config, "live_callback_mode", None) == ARCHIVE_LIVE_MODE:
         progress.live_source = "archive"
+        if subset.method_of(request.configuration) is not None:
+            progress.live_source = "archive_subset"
+            progress.subset_size = int(request.configuration["pop_size"])
     return vamos.optimize(
         request.problem,
         algorithm=request.algorithm,
@@ -184,6 +210,33 @@ def solve(request: SolveRequest, progress: FileProgress) -> Any:
         n_obj=request.n_obj,
         live_viz=progress,
     )
+
+
+def save_selection(directory: Path, request: SolveRequest, result: Any) -> np.ndarray | None:
+    """Choose and record the subset of an unbounded archive the run returns, if it asks for one.
+
+    The run artifact keeps the whole archive; the subset is its non-dominated rows listed in
+    SELECTION_FILE, as many as the population.
+
+    Returns:
+        The objectives of the subset, or None when the run returns everything it found.
+    """
+    method = subset.method_of(request.configuration)
+    if method is None:
+        return None
+    front = np.asarray(result.front(), dtype=float)
+    size = int(request.configuration["pop_size"])
+    kept = subset.select(method, front, size)
+    write_json(
+        directory / SELECTION_FILE,
+        {
+            "method": method,
+            "size": size,
+            "archive_size": len(front),
+            "indices": [int(index) for index in kept],
+        },
+    )
+    return front[kept]
 
 
 def run(directory: Path, min_interval: float = MIN_WRITE_INTERVAL_SECONDS) -> int:
@@ -202,6 +255,9 @@ def run(directory: Path, min_interval: float = MIN_WRITE_INTERVAL_SECONDS) -> in
             raise ValueError(f"No request in {directory}.")
         result = solve(request, progress)
         vamos.save_result(result, run_.artifact)
+        selected = save_selection(directory, request, result)
+        if selected is not None:
+            progress.show_final(selected, len(np.asarray(result.front())))
     except Exception as error:  # noqa: BLE001 - report any failure to the app
         traceback.print_exc()
         progress.write_status("failed", error=f"{type(error).__name__}: {error}")

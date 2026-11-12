@@ -10,6 +10,8 @@
 # - M4: the defaults of non-default operators come from the operators' own defaults in VAMOS.
 #   Provisional ones are marked PROVISIONAL below.
 # - M5: operator rates are global sub-parameters of their operator.
+# - archive_subset_selection is not in VAMOS: the studio selects the result from an unbounded
+#   archive with VAMOS's subset-selection functions (see vamos_studio/backend/subset.py).
 # A drift-detection test checks this file against VAMOS's space.
 schema: vamos.parameter-space
 schema_version: 1.0.0
@@ -58,10 +60,18 @@ parameters:
     default: none
     role: adaptive
     label: External archive
-    description: Whether non-dominated solutions are kept in an archive besides the population.
+    description: Whether non-dominated solutions are kept in an archive besides the population; a bounded archive is as large as the population, and from an unbounded one the result keeps as many solutions as the population.
     values:
       none: {}
-      unbounded: {}
+      unbounded:
+        conditional_parameters:
+          archive_subset_selection:
+            type: categorical
+            default: farthest
+            values: [farthest, crowding, hv_greedy, kmeans, none]
+            role: structural
+            label: Subset selection
+            description: How the run's result is chosen from the unbounded archive, as many solutions as the population; none returns the whole archive.
       bounded:
         conditional_parameters:
           archive_prune_policy:

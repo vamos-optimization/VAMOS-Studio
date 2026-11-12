@@ -13,13 +13,17 @@ from vamos.engine.tuning.racing.bridge_spaces import build_nsgaii_config_space
 from vamos.engine.tuning.racing.param_space import Boolean, Categorical, Int, Real
 
 from vamos_studio.backend.upstream.vamos_bridge import (
+    STUDIO_ONLY_PARAMETERS,
     builtin_space,
     to_algorithm_config,
     to_vamos_assignment,
 )
 
-# Grammar parameters that have no single counterpart in VAMOS's space (changes M1 and M2).
-GRAMMAR_ONLY = {"external_archive", "polynomial_eta", "linked_polynomial_eta"}
+# Grammar parameters that have no single counterpart in VAMOS's space (changes M1 and M2), and
+# those the studio applies itself.
+GRAMMAR_ONLY = {"external_archive", "polynomial_eta", "linked_polynomial_eta"} | set(
+    STUDIO_ONLY_PARAMETERS
+)
 VAMOS_ONLY = {"use_external_archive", "archive_unbounded", "mutation_eta"}
 EVALUATIONS = 3000
 SEED = 7
