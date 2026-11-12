@@ -33,9 +33,10 @@ Works with VAMOS 1.1.
   default one in a form built from its grammar (only the active parameters are shown, and the
   changes and the equivalent command line are listed), set the evaluations and the seed, and
   launch the run in the background, as a worker process that survives the browser.
-- **Optimize › Monitor**: follow a run live (generation, evaluations, elapsed time and its
-  non-dominated front over the reference front), stop it keeping what it found, or cancel it; see
-  why a run failed or was interrupted.
+- **Optimize › Monitor**: follow a run live (generation, evaluations, elapsed time and its front
+  over the reference front), stop it keeping what it found, or cancel it; see why a run failed or
+  was interrupted. With an external archive, the live front is the archive, which is what the run
+  returns; otherwise, the non-dominated front of the population. The caption says which.
 - **Live view** (New run): a run can be slowed down to watch its front converge in the Monitor,
   pausing a chosen time every chosen number of generations, with an estimate of what the pauses
   add. The front is reported before each pause; the pauses change the runtime, never the results.
