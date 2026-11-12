@@ -8,6 +8,7 @@ import vamos
 from conftest import make_request
 
 from vamos_studio.backend import runs, worker
+from vamos_studio.backend.upstream.vamos_bridge import builtin_space, to_algorithm_config
 
 
 def status_of(directory) -> dict:
@@ -131,6 +132,53 @@ class TestPauses:
         # Assert
         assert np.array_equal(fronts[0], fronts[1])
         assert status_of(tmp_path / "paused")["paused_seconds"] > 0
+
+
+class TestLiveArchive:
+    """With an external archive, the Monitor shows the archive: what the run returns."""
+
+    def test_should_show_the_archive_as_the_live_front(self, tmp_path):
+        # Arrange
+        request = make_request(max_evaluations=3000, external_archive="bounded")
+        runs.write_json(tmp_path / runs.REQUEST_FILE, request.to_dict())
+
+        # Act
+        worker.run(tmp_path, min_interval=0.0)
+
+        # Assert
+        run = runs.SolveRun(tmp_path)
+        assert status_of(tmp_path)["live_source"] == "archive"
+        live, final = runs.live_front(run), runs.result_front(run)[0]
+        assert live.shape == final.shape
+        assert np.allclose(live, final, rtol=1e-9)  # the live front is written with 10 digits
+
+    def test_should_leave_a_configuration_without_archive_as_it_is(self):
+        # Arrange
+        space = builtin_space("nsgaii", "real")
+        config = to_algorithm_config(space.default_configuration())
+
+        # Act / Assert
+        assert worker.with_live_archive(config) is config
+
+    def test_should_not_change_the_results_of_a_run_with_an_archive(self):
+        # Arrange
+        space = builtin_space("nsgaii", "real")
+        values = space.default_values() | {"external_archive": "bounded"}
+        config = to_algorithm_config(space.configuration(values, complete=True))
+
+        # Act
+        fronts = [
+            np.asarray(
+                vamos.optimize(
+                    "zdt1", algorithm="nsgaii", algorithm_config=c, max_evaluations=3000, seed=3
+                ).F
+            )
+            for c in (config, worker.with_live_archive(config))
+        ]
+
+        # Assert
+        assert worker.with_live_archive(config).live_callback_mode == "population_archive"
+        assert np.array_equal(fronts[0], fronts[1])
 
 
 class TestRun:

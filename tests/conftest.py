@@ -16,7 +16,7 @@ def make_request(
 ) -> runs.SolveRequest:
     """A request of the default NSGA-II configuration, with `changes` to its parameters."""
     space = builtin_space("nsgaii", "real")
-    values = dict(space.default_configuration().values) | changes
+    values = space.default_values() | changes
     configuration = space.configuration(values, complete=True)
     return runs.SolveRequest(
         problem=problem,
