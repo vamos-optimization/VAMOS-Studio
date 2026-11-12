@@ -33,6 +33,7 @@ class TestFileProgress:
             "elapsed_seconds": 0,
             "paused_seconds": 0.0,
             "ended_by": None,
+            "live_source": "population",
             "error": None,
         }
         assert np.array_equal(runs.live_front(runs.SolveRun(tmp_path)), front)

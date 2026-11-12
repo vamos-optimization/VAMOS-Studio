@@ -8,6 +8,7 @@ writes the stop mark; the run then ends with the solutions found so far.
 
 from __future__ import annotations
 
+import dataclasses
 import sys
 import time
 import traceback
@@ -42,6 +43,9 @@ class FileProgress:
     With `pause_seconds`, it also pauses every `pause_every` generations, after writing the front,
     so that the live view shows the front converge; sleeping uses no random numbers, so the
     results are the same as without pauses.
+
+    The live front is the non-dominated front of the population, or the external archive when
+    the algorithm keeps one (`live_source` "archive"): the archive is what the run returns.
     """
 
     def __init__(
@@ -61,6 +65,7 @@ class FileProgress:
         self.evaluations = 0
         self.stopped = False
         self.paused_seconds = 0.0
+        self.live_source = "population"
         self._started = time.monotonic()
         self._last_write = float("-inf")
         self._front: np.ndarray | None = None
@@ -80,7 +85,10 @@ class FileProgress:
         evaluations = (stats or {}).get("evals")
         if evaluations is not None:
             self.evaluations = int(evaluations)
-        if F is not None:
+        archive = (stats or {}).get("archive")
+        if self.live_source == "archive" and archive is not None:
+            self._front = np.asarray(archive["F"], dtype=float)
+        elif F is not None:
             self._front = np.asarray(F, dtype=float)
         if self._pauses_now():
             self.flush("running")
@@ -135,9 +143,26 @@ class FileProgress:
                 "elapsed_seconds": round(self._last_write - self._started, 3),
                 "paused_seconds": round(self.paused_seconds, 3),
                 "ended_by": ended_by,
+                "live_source": self.live_source,
                 "error": error,
             },
         )
+
+
+# VAMOS's live-callback mode that also passes the external archive (in `stats["archive"]`).
+ARCHIVE_LIVE_MODE: Final = "population_archive"
+
+
+def with_live_archive(config: Any) -> Any:
+    """`config`, asking VAMOS to pass its external archive to the live callback, if it has one.
+
+    The callback mode only changes what the callback receives, not the run: the results are the
+    same (tests/test_worker.py checks it).
+    """
+    has_archive = getattr(config, "external_archive", None) is not None
+    if has_archive and hasattr(config, "live_callback_mode") and dataclasses.is_dataclass(config):
+        return dataclasses.replace(config, live_callback_mode=ARCHIVE_LIVE_MODE)
+    return config
 
 
 def solve(request: SolveRequest, progress: FileProgress) -> Any:
@@ -147,7 +172,9 @@ def solve(request: SolveRequest, progress: FileProgress) -> Any:
         raise ValueError(f"No grammar for {request.algorithm} with {request.encoding} encoding.")
     if space.content_hash() != request.space_hash:
         raise ValueError(f"The grammar {space.name} changed since the run was requested.")
-    config = to_algorithm_config(space.configuration(request.configuration))
+    config = with_live_archive(to_algorithm_config(space.configuration(request.configuration)))
+    if getattr(config, "live_callback_mode", None) == ARCHIVE_LIVE_MODE:
+        progress.live_source = "archive"
     return vamos.optimize(
         request.problem,
         algorithm=request.algorithm,

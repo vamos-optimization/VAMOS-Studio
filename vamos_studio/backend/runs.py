@@ -115,6 +115,8 @@ class RunStatus:
         elapsed_seconds: The time since the run started.
         paused_seconds: How much of that time the worker spent pausing for the live view.
         ended_by: What ended a run that is over: "evaluations" or "user".
+        live_source: What the live front shows: the population's non-dominated front
+            ("population") or the external archive ("archive").
         error: Why the run failed, if it did.
     """
 
@@ -125,6 +127,7 @@ class RunStatus:
     elapsed_seconds: float = 0.0
     paused_seconds: float = 0.0
     ended_by: str | None = None
+    live_source: str = "population"
     error: str | None = None
 
     @property

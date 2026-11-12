@@ -80,7 +80,12 @@ def show_run(run: runs.SolveRun) -> None:
     front = runs.live_front(run)
     reference = reference_front(request.problem, problem_entry(request.problem).n_obj)
     st.plotly_chart(charts.front_figure(front, reference), width="stretch")
-    st.caption("The current non-dominated front, in blue, over the reference front, in grey.")
+    shown = (
+        "The current external archive (what the run returns)"
+        if status is not None and status.live_source == "archive"
+        else "The current non-dominated front of the population"
+    )
+    st.caption(f"{shown}, in blue, over the reference front, in grey.")
     if state.active:
         run_controls(run)
     else:
