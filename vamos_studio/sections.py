@@ -51,7 +51,7 @@ SECTIONS = (
                 "🧬",
                 "Browse VAMOS's multi-objective algorithms and the parameters each one can be "
                 "configured with, for each encoding.",
-                available=False,
+                available=True,
             ),
             Page(
                 "pages/explore_problems.py",
