@@ -276,6 +276,14 @@ active by default. What it showed:
   1.0, whereas `main` uses 0.9, and `simplex_epsilon` ranges over [0.1, 1.0]. The pinned VAMOS
   series and the drift-detection tests (`tests/test_nsgaii_grammar.py`) catch such changes.
 
+### 7.2 Parameters the studio applies itself
+
+A grammar may hold parameters that VAMOS does not have, which the studio applies around the run.
+The first is `archive_subset_selection`, under `external_archive = unbounded`: how the result is
+chosen from an unbounded archive. Such parameters are listed in `STUDIO_ONLY_PARAMETERS`
+(`vamos_bridge.py`), are left out of what is passed to VAMOS, and are excluded from the
+drift-detection comparison with VAMOS's space. Each one is an upstream candidate (`UPSTREAM.md`).
+
 ## 8. Plan
 
 - **VAMOS-Studio (now).** `vamos_studio/backend/upstream/parameter_space.py` implements the

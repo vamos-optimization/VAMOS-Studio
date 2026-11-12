@@ -37,6 +37,13 @@ Works with VAMOS 1.1.
   over the reference front), stop it keeping what it found, or cancel it; see why a run failed or
   was interrupted. With an external archive, the live front is the archive, which is what the run
   returns; otherwise, the non-dominated front of the population. The caption says which.
+- **Subset of an unbounded archive**: a bounded external archive is as large as the population;
+  a run with an unbounded one now returns, as jMetal does, a diverse subset of it as large as the
+  population instead of every non-dominated solution found (thousands). The new parameter `archive_subset_selection` of NSGA-II's grammar chooses how:
+  `farthest` (default: max-min distance on normalized objectives, the greedy selection of
+  distance-based subset selection), `crowding`, `hv_greedy`, `kmeans`, or `none` for the whole
+  archive; the selection is VAMOS's. Results shows the subset and can show the whole archive; the
+  run artifact keeps the whole archive.
 - **DTLZ problems and fronts of three objectives**: DTLZ1–7 are available, with two or three
   objectives (chosen in Explore › Problems, New run and the indicator sandbox; VAMOS derives the
   number of variables). Fronts of three objectives are drawn in 3D, which can be rotated, and in
