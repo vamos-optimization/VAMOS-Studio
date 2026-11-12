@@ -8,6 +8,7 @@ import streamlit as st
 
 from vamos_studio.backend.catalogue import (
     ENCODING_LABELS,
+    REFERENCE_FRONT_DEVIATIONS,
     family_label,
     problem_details,
     problem_entries,
@@ -96,3 +97,11 @@ with front_tab:
         figure = px.scatter(x=front[:, 0], y=front[:, 1], labels={"x": "f1", "y": "f2"})
         figure.update_traces(marker={"size": 3})
         st.plotly_chart(figure, width="stretch")
+        deviation = REFERENCE_FRONT_DEVIATIONS.get(problem.key)
+        if deviation is not None:
+            st.warning(
+                f"This file, shipped with VAMOS 1.1, has points up to {deviation} away from the "
+                "true front (in f2). Later VAMOS versions ship a corrected sample, so indicators "
+                "measured against this one are not comparable with theirs.",
+                icon=":material/warning:",
+            )

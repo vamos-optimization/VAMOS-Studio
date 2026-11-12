@@ -56,6 +56,17 @@ FAMILY_LABELS: Final = {
     "lz09_f": "LZ09",
 }
 _FAMILY = re.compile(r"^(.*?)_?\d+$")
+# VAMOS 1.1.0 ships inaccurate samples of some reference fronts (its docs/reference/problems.md,
+# "Replaced samples"; fixed after 1.1.0). For the ZDT fronts the studio supports: the largest
+# distance, in f2, between a point of the shipped file and the analytic front at the same f1.
+# tests/test_catalogue.py measures it again, so it fails once VAMOS ships the corrected files.
+REFERENCE_FRONT_DEVIATIONS: Final = {
+    "zdt1": 0.0006,
+    "zdt2": 0.0005,
+    "zdt3": 0.0016,
+    "zdt4": 0.0146,
+    "zdt6": 0.0023,
+}
 
 
 @dataclass(slots=True, frozen=True)
