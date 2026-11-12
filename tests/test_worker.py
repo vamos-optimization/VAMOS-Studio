@@ -4,6 +4,7 @@ import json
 import time
 
 import numpy as np
+import pytest
 import vamos
 from conftest import make_request
 
@@ -180,6 +181,46 @@ class TestLiveArchive:
         # Assert
         assert worker.with_live_archive(config).live_callback_mode == "population_archive"
         assert np.array_equal(fronts[0], fronts[1])
+
+
+class TestLiveSubsetOfAnUnboundedArchive:
+    """From an unbounded archive, the Monitor shows as many solutions as the result has."""
+
+    def test_should_show_a_subset_as_large_as_the_population_while_running(self, tmp_path):
+        # Arrange
+        progress = worker.FileProgress(tmp_path, 1000, min_interval=0.0)
+        progress.live_source, progress.subset_size = "archive_subset", 10
+        archive = np.random.default_rng(0).random((50, 2))
+
+        # Act
+        progress.on_generation(4, F=archive[:5], stats={"evals": 500, "archive": {"F": archive}})
+
+        # Assert
+        assert runs.live_front(runs.SolveRun(tmp_path)).shape == (10, 2)
+        assert status_of(tmp_path)["archive_size"] == 50
+
+    @pytest.mark.parametrize("method", ["farthest", "crowding"])
+    def test_should_end_showing_the_result(self, tmp_path, method):
+        # Arrange
+        request = runs.SolveRequest.from_dict(
+            make_request(
+                "dtlz2", 5000, external_archive="unbounded", archive_subset_selection=method
+            ).to_dict()
+            | {"n_obj": 3}
+        )
+        runs.write_json(tmp_path / runs.REQUEST_FILE, request.to_dict())
+
+        # Act
+        worker.run(tmp_path, min_interval=0.0)
+
+        # Assert
+        run = runs.SolveRun(tmp_path)
+        live, result = runs.live_front(run), runs.result_front(run)[0]
+        status = status_of(tmp_path)
+        assert status["live_source"] == "archive_subset"
+        assert status["archive_size"] == runs.read_selection(run).archive_size
+        assert live.shape == result.shape == (100, 3)
+        assert np.allclose(np.sort(live, axis=0), np.sort(result, axis=0), rtol=1e-9)
 
 
 class TestRun:

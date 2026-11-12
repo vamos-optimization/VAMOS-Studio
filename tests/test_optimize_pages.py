@@ -6,7 +6,7 @@ A run is launched from New run as a user would, and then followed in the other p
 from pathlib import Path
 
 import pytest
-from conftest import wait_for_end
+from conftest import make_request, wait_for_end
 from streamlit.testing.v1 import AppTest
 
 from vamos_studio.backend import runs
@@ -190,3 +190,35 @@ class TestThreeObjectives:
         assert not results.exception
         assert any("with 3 objectives" in c.value for c in results.caption)
         assert results.dataframe[0].value.columns[:4].tolist() == ["solution", "f1", "f2", "f3"]
+
+
+class TestUnboundedArchiveResults:
+    def test_should_show_the_subset_and_toggle_the_whole_archive(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        run = runs.launch(make_request("zdt1", 15000, external_archive="unbounded"), tmp_path)
+        wait_for_end(run)
+        app = open_page(RESULTS)
+        subset_rows = len(app.dataframe[2].value)
+
+        # Act
+        app.toggle[0].set_value(True).run()
+
+        # Assert
+        assert not app.exception
+        assert "`farthest` subset selection" in app.info[0].value
+        assert subset_rows == 100
+        assert len(app.dataframe[2].value) > 100
+
+    def test_should_say_the_monitor_shows_the_result_subset(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        run = runs.launch(make_request("zdt1", 15000, external_archive="unbounded"), tmp_path)
+        wait_for_end(run)
+
+        # Act
+        app = open_page(MONITOR)
+
+        # Assert
+        assert not app.exception
+        assert any(c.value.startswith("The result: 100 of the") for c in app.caption)

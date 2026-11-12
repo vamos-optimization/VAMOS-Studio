@@ -119,6 +119,49 @@ class TestBridge:
         assert front.ndim == 2 and front.shape[1] == 2 and len(front) > 0
 
 
+class TestStudioOnlyParameters:
+    def test_should_not_pass_the_subset_selection_to_vamos(self, space):
+        # Arrange
+        values = space.default_values() | {"external_archive": "unbounded"}
+
+        # Act
+        assignment = to_vamos_assignment(space.configuration(values, complete=True))
+
+        # Assert
+        assert "archive_subset_selection" not in assignment
+        assert assignment["use_external_archive"] and assignment["archive_unbounded"]
+
+
+class TestBoundedArchive:
+    def test_should_be_as_large_as_the_population(self, space):
+        # Arrange
+        values = space.default_values() | {"pop_size": 60, "external_archive": "bounded"}
+
+        # Act
+        config = to_algorithm_config(space.configuration(values, complete=True)).to_dict()
+
+        # Assert
+        assert config["external_archive"]["capacity"] == config["pop_size"] == 60
+
+    @pytest.mark.parametrize("archive", ["bounded", "unbounded"])
+    def test_should_make_vamos_return_the_archive_and_not_the_population(self, space, archive):
+        """VAMOS returns the archive with result_mode "non_dominated", the population otherwise."""
+        # Arrange
+        values = space.default_values() | {"external_archive": archive}
+        config = to_algorithm_config(space.configuration(values, complete=True))
+
+        # Act
+        result = vamos.optimize(
+            "zdt1", algorithm="nsgaii", algorithm_config=config, max_evaluations=10000, seed=1
+        )
+
+        # Assert
+        assert config.result_mode == "non_dominated"
+        assert np.array_equal(np.asarray(result.F), result.data["archive"]["F"])
+        if archive == "unbounded":
+            assert len(result.F) > len(result.data["population"]["F"])
+
+
 class TestDriftFromVamos:
     def test_should_have_the_same_parameters_as_the_vamos_space(self, space, vamos_space):
         # Act
