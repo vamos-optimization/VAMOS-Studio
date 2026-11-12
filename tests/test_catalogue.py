@@ -1,5 +1,6 @@
 """Tests for the catalogue of algorithms and problems."""
 
+import numpy as np
 import pytest
 
 from vamos_studio.backend import catalogue
@@ -72,3 +73,26 @@ class TestProblems:
         # Act / Assert
         with pytest.raises(KeyError):
             catalogue.problem_entry("no_such_problem")
+
+
+class TestReferenceFrontDeviations:
+    """The documented inaccuracy of VAMOS 1.1's ZDT reference fronts, measured again."""
+
+    ANALYTIC = {
+        "zdt1": lambda f1: 1 - np.sqrt(f1),
+        "zdt2": lambda f1: 1 - f1**2,
+        "zdt3": lambda f1: 1 - np.sqrt(f1) - f1 * np.sin(10 * np.pi * f1),
+        "zdt4": lambda f1: 1 - np.sqrt(f1),
+        "zdt6": lambda f1: 1 - f1**2,
+    }
+
+    @pytest.mark.parametrize("key", sorted(ANALYTIC))
+    def test_should_match_the_shipped_reference_front(self, key):
+        # Arrange
+        front = catalogue.reference_front(key, 2)
+
+        # Act
+        deviation = np.max(np.abs(front[:, 1] - self.ANALYTIC[key](front[:, 0])))
+
+        # Assert
+        assert round(float(deviation), 4) == catalogue.REFERENCE_FRONT_DEVIATIONS[key]

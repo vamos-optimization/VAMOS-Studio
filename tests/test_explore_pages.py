@@ -56,3 +56,49 @@ class TestProblemsPage:
         # Assert
         assert app.selectbox[0].options == ["ZDT"]
         assert "ZDT5" not in app.selectbox[1].options
+
+
+INDICATORS_PAGE = str(ROOT / "pages" / "explore_indicators.py")
+
+
+class TestIndicatorsPage:
+    def test_should_show_one_row_per_indicator(self):
+        # Arrange
+        from vamos_studio.backend.indicators import INDICATORS
+
+        # Act
+        app = AppTest.from_file(INDICATORS_PAGE, default_timeout=60).run()
+
+        # Assert
+        assert not app.exception
+        table = next(m.value for m in app.markdown if "| Abbreviation |" in m.value)
+        for entry in INDICATORS:
+            assert f"| `{entry.key}` |" in table
+
+    def test_should_show_a_value_for_every_available_indicator(self):
+        # Act
+        app = AppTest.from_file(INDICATORS_PAGE, default_timeout=60).run()
+
+        # Assert
+        assert [metric.label for metric in app.metric] == [
+            "HV ↑",
+            "NHV ↓",
+            "IGD ↓",
+            "IGD+ ↓",
+            "EP ↓",
+            "Δp ↓",
+        ]
+
+    def test_should_give_zero_distances_for_the_whole_front_unshifted(self):
+        # Arrange
+        app = AppTest.from_file(INDICATORS_PAGE, default_timeout=60).run()
+
+        # Act
+        app.slider[0].set_value(200).run()
+        app.slider[1].set_value(0.0).run()
+
+        # Assert
+        assert not app.exception
+        values = {metric.label: metric.value for metric in app.metric}
+        assert float(values["NHV ↓"]) < 0.01
+        assert float(values["IGD+ ↓"]) < 0.01
