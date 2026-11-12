@@ -286,3 +286,119 @@ class TestBinaryProblem:
         solutions = results.dataframe[-1].value
         assert set(solutions["x1"].unique()) <= {0, 1}
         assert solutions["x1"].dtype.kind == "i"
+
+
+PROBLEMS = "pages/explore_problems.py"
+
+
+def launch_knapsack(app: AppTest) -> runs.SolveRun:
+    """Choose the binary knapsack in New run, with 3000 evaluations, and launch it."""
+    problem = next(box for box in app.selectbox if box.label == "Problem")
+    problem.select_index(problem.options.index("Binary Knapsack")).run()
+    number_input(app, "Evaluations").set_value(3000).run()
+    next(b for b in app.button if b.label == "Launch the run").click().run()
+
+
+def reference_radio(app: AppTest):
+    return next(radio for radio in app.radio if radio.label == "Reference front")
+
+
+class TestApproximateFrontsInThePages:
+    def test_should_build_a_front_from_new_run_and_offer_it_afterwards(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        app = open_page(NEW_RUN)
+        problem = next(box for box in app.selectbox if box.label == "Problem")
+        problem.select_index(problem.options.index("Binary Knapsack")).run()
+        before = reference_radio(app).options
+        contribute_by_default = checkbox(
+            app, "Add this run's solutions to the approximate reference front of this problem"
+        ).value
+
+        # Act
+        launch_knapsack(app)
+        wait_for_end(runs.list_runs(tmp_path)[0])
+        again = open_page(NEW_RUN)
+        problem = next(box for box in again.selectbox if box.label == "Problem")
+        problem.select_index(problem.options.index("Binary Knapsack")).run()
+
+        # Assert
+        assert before == ["None (no indicators)"] and contribute_by_default
+        options = reference_radio(again).options
+        assert len(options) == 2 and options[0].startswith("Approximate front v1")
+
+    def test_should_measure_zdt1_with_its_exact_front_by_default(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+
+        # Act
+        app = open_page(NEW_RUN)
+
+        # Assert
+        assert reference_radio(app).value == "exact"
+        assert not checkbox(
+            app, "Add this run's solutions to the approximate reference front of this problem"
+        ).value
+
+    def test_should_add_a_run_from_results(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        run = runs.launch(make_request("zdt1", 3000), tmp_path)
+        wait_for_end(run)
+        app = open_page(RESULTS)
+
+        # Act
+        next(b for b in app.button if b.label.startswith("Add this run")).click().run()
+
+        # Assert
+        assert not app.exception
+        assert runs.contributed(run) is not None
+
+    def test_should_offer_to_measure_with_a_newer_version(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        first = runs.launch(
+            runs.SolveRequest.from_dict(
+                make_request("zdt1", 3000).to_dict() | {"contribute": True}
+            ),
+            tmp_path,
+        )
+        wait_for_end(first)
+        measured = runs.launch(
+            runs.SolveRequest.from_dict(
+                make_request("zdt1", 3000).to_dict()
+                | {"seed": 2, "reference_front": "approximate", "contribute": True}
+            ),
+            tmp_path,
+        )
+        wait_for_end(measured)
+        app = open_page(RESULTS)
+
+        # Act
+        app.toggle[0].set_value(True).run()
+
+        # Assert
+        assert not app.exception
+        assert any("the current approximate front v2" in c.value for c in app.caption)
+
+    def test_should_view_and_delete_a_front_in_explore_problems(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        run = runs.launch(
+            runs.SolveRequest.from_dict(
+                make_request("zdt1", 3000).to_dict() | {"contribute": True}
+            ),
+            tmp_path,
+        )
+        wait_for_end(run)
+        app = open_page(PROBLEMS)
+
+        # Act
+        shown = next(box for box in app.selectbox if box.label == "Approximate front").options
+        next(b for b in app.button if b.label == "Delete this approximate front…").click().run()
+        next(b for b in app.button if b.label == "Yes, delete it").click().run()
+
+        # Assert
+        assert not app.exception
+        assert len(shown) == 1 and "approximate front v1" in shown[0]
+        assert runs.contributed(run) is None
