@@ -105,3 +105,30 @@ class TestFrontFigure:
 
         # Assert
         assert [trace.name for trace in figure.data] == ["Reference front"]
+
+
+class TestFrontFigure3D:
+    FRONT = np.array([[0.0, 0.5, 0.5], [0.5, 0.0, 0.5], [0.5, 0.5, 0.0]])
+
+    def test_should_draw_a_front_of_three_objectives_in_3d(self):
+        # Act
+        figure = charts.front_figure(self.FRONT, self.FRONT, highlighted=0)
+
+        # Assert
+        assert [trace.type for trace in figure.data] == ["scatter3d"] * 3
+
+    def test_should_draw_the_three_projections_with_one_legend(self):
+        # Act
+        figure = charts.projections_figure(self.FRONT, self.FRONT, highlighted=0)
+
+        # Assert
+        assert len(figure.data) == 9
+        assert [trace.showlegend for trace in figure.data].count(True) == 3
+        assert [a.text for a in figure.layout.annotations] == ["f1 – f2", "f1 – f3", "f2 – f3"]
+
+    def test_should_label_the_front_as_asked(self):
+        # Act
+        figure = charts.front_figure(self.FRONT[:, :2], front_label="Approximation")
+
+        # Assert
+        assert [trace.name for trace in figure.data] == ["Approximation"]

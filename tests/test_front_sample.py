@@ -38,3 +38,20 @@ class TestSampleFront:
         # Act / Assert
         with pytest.raises(ValueError):
             sample_front(FRONT, n_points, shift)
+
+
+class TestSampleFront3D:
+    def test_should_spread_the_points_of_a_surface(self):
+        # Arrange
+        rng = np.random.default_rng(0)
+        sphere = np.abs(rng.normal(size=(2000, 3)))
+        sphere /= np.linalg.norm(sphere, axis=1, keepdims=True)
+
+        # Act
+        sample = sample_front(sphere, 30, 0.0)
+
+        # Assert
+        gaps = np.linalg.norm(sample[:, None] - sample[None], axis=2)
+        np.fill_diagonal(gaps, np.inf)
+        assert len(sample) == 30
+        assert gaps.min() > 0.1  # no two points crowded together on the unit octant
