@@ -16,9 +16,12 @@ def algorithms_app() -> AppTest:
 
 
 class TestAlgorithmsPage:
-    def test_should_offer_only_nsgaii_for_real_problems(self, algorithms_app: AppTest):
+    def test_should_offer_only_nsgaii_for_real_and_binary_problems(self, algorithms_app: AppTest):
         # Assert
-        assert [box.options for box in algorithms_app.selectbox] == [["NSGA-II"], ["Real"]]
+        assert [box.options for box in algorithms_app.selectbox] == [
+            ["NSGA-II"],
+            ["Real", "Binary"],
+        ]
 
     def test_should_show_the_default_configuration_as_a_command_line(self, algorithms_app: AppTest):
         # Act
@@ -49,13 +52,14 @@ class TestProblemsPage:
         assert not app.exception
         assert app.subheader[0].value == label
 
-    def test_should_not_offer_the_binary_zdt5(self):
+    def test_should_offer_the_active_families_and_zdt5(self):
         # Act
         app = AppTest.from_file(PROBLEMS_PAGE, default_timeout=60).run()
 
         # Assert
-        assert app.selectbox[0].options == ["ZDT", "DTLZ"]
-        assert "ZDT5" not in app.selectbox[1].options
+        assert app.selectbox[0].options[:2] == ["ZDT", "DTLZ"]
+        assert {"Knapsack (binary)", "QUBO (binary)"} <= set(app.selectbox[0].options)
+        assert "ZDT5" in app.selectbox[1].options
 
     @pytest.mark.parametrize("n_obj", [2, 3])
     def test_should_follow_the_objectives_with_the_standard_variables(self, n_obj):

@@ -50,7 +50,12 @@ st.markdown(
     "Take evenly spread points of a reference front, move them away from it, and see how each "
     "indicator responds. With all the points and no shift, every distance indicator is 0."
 )
-problems = [entry for entry in problem_entries() if entry.available]
+# Only problems with a reference front: the indicators measure fronts against it.
+problems = [
+    entry
+    for entry in problem_entries()
+    if entry.available and reference_front(entry.key, entry.n_obj) is not None
+]
 controls = st.columns([3, 1, 2, 2])
 problem = controls[0].selectbox("Problem", problems, format_func=lambda item: item.label)
 n_obj = controls[1].selectbox(

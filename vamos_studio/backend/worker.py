@@ -188,6 +188,20 @@ def with_live_archive(config: Any) -> Any:
     return config
 
 
+def problem_to_solve(request: SolveRequest) -> Any:
+    """What to pass to `vamos.optimize` as the problem: its VAMOS id, or its class.
+
+    VAMOS 1.1's `optimize` passes `problem_kwargs` of a problem given by id to
+    `make_problem_selection`, which takes only `n_var` and `n_obj`, so any other argument fails
+    (see UPSTREAM.md). Given the problem's class, `optimize` passes them to its constructor
+    instead. The id is kept when there are no other arguments: VAMOS replays a run of a problem
+    given by id exactly, and some given by class not at all.
+    """
+    if not request.problem_kwargs:
+        return request.problem
+    return type(vamos.make_problem_selection(request.problem).instantiate())
+
+
 def solve(request: SolveRequest, progress: FileProgress) -> Any:
     """Run the request with VAMOS, reporting through `progress`; return VAMOS's result."""
     space = builtin_space(request.algorithm, request.encoding)
@@ -202,7 +216,7 @@ def solve(request: SolveRequest, progress: FileProgress) -> Any:
             progress.live_source = "archive_subset"
             progress.subset_size = int(request.configuration["pop_size"])
     return vamos.optimize(
-        request.problem,
+        problem_to_solve(request),
         algorithm=request.algorithm,
         algorithm_config=config,
         max_evaluations=request.max_evaluations,

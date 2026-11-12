@@ -21,7 +21,7 @@ from .parameter_space import Configuration, ParameterSpace, space_from_yaml
 
 SPACES_PACKAGE: Final = "vamos_studio.backend.upstream.spaces"
 # Grammars shipped with the studio, as (algorithm, encoding).
-BUILTIN_SPACES: Final = (("nsgaii", "real"),)
+BUILTIN_SPACES: Final = (("nsgaii", "real"), ("nsgaii", "binary"))
 
 # Parameters of the grammars that VAMOS does not have: the studio applies them itself.
 STUDIO_ONLY_PARAMETERS: Final = frozenset({"archive_subset_selection"})

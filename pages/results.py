@@ -71,8 +71,10 @@ def show_indicators(
 def show_solutions(front: np.ndarray, variables: np.ndarray, run_id: str) -> None:
     names = objective_names(front.shape[1])
     table = pd.DataFrame(front, columns=names)
+    is_binary = np.isin(variables, (0, 1)).all()
     for index in range(variables.shape[1]):
-        table[f"x{index + 1}"] = variables[:, index]
+        column = variables[:, index]
+        table[f"x{index + 1}"] = column.astype(int) if is_binary else column
     st.dataframe(table.sort_values(names[0]), hide_index=True, width="stretch")
     left, right = st.columns(2)
     left.download_button(

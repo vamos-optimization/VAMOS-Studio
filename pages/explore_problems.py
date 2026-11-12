@@ -18,9 +18,9 @@ from vamos_studio.problem_form import render_problem_arguments
 st.title("Problems")
 st.markdown("The problems of VAMOS, grouped by family.")
 st.info(
-    "Prototype: the **ZDT** and **DTLZ** families, for real-coded problems, are available: set "
-    "their number of variables, and DTLZ's number of objectives (two or three). ZDT5 is "
-    "binary-coded, and the other families are listed but not active yet.",
+    "Prototype: the **ZDT** and **DTLZ** families and the binary **knapsack**, **QUBO** and "
+    "**feature selection** problems are available, with their arguments (DTLZ with two or three "
+    "objectives). The other families are listed but not active yet.",
     icon=":material/construction:",
 )
 
@@ -99,9 +99,14 @@ with front_tab:
     if front is None:
         st.info("There is no reference front for this problem.")
     else:
+        same_as_evolver = (
+            ": the same file Evolver and Evolver-Studio use"
+            if str(details.reference_front_source).startswith("jMetal")
+            else ""
+        )
         st.caption(
-            f"{len(front)} points, from {details.reference_front_source}: the same file Evolver "
-            "and Evolver-Studio use. The studio measures fronts against it."
+            f"{len(front)} points, from {details.reference_front_source}{same_as_evolver}. The "
+            "studio measures fronts against it."
         )
         st.plotly_chart(charts.front_figure(None, front), width="stretch")
         if details.n_obj == 3:

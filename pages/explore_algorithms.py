@@ -14,8 +14,8 @@ st.markdown(
     "own parameters."
 )
 st.info(
-    "Prototype: only **NSGA-II for real-coded problems** is available. The other algorithms "
-    "and encodings are listed but not active yet.",
+    "Prototype: only **NSGA-II**, for **real-coded** and **binary** problems, is available. The "
+    "other algorithms and encodings are listed but not active yet.",
     icon=":material/construction:",
 )
 

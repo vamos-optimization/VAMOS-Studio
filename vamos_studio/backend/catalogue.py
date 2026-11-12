@@ -44,8 +44,14 @@ ALGORITHM_LABELS: Final = {
     "smsemoa": "SMS-EMOA",
     "spea2": "SPEA2",
 }
-# Problem families the studio supports, and the encoding it supports them for.
-SUPPORTED_PROBLEM_FAMILIES: Final = {"zdt": "real", "dtlz": "real"}
+# Problem families the studio supports, and the encodings it supports them for.
+SUPPORTED_PROBLEM_FAMILIES: Final = {
+    "zdt": ("real", "binary"),
+    "dtlz": ("real",),
+    "bin_knapsack": ("binary",),
+    "bin_qubo": ("binary",),
+    "bin_feat": ("binary",),
+}
 # Numbers of objectives the studio offers for problems that let you choose: those of the reference
 # fronts it copies from jMetal, and those its charts draw (2D and 3D).
 SUPPORTED_N_OBJ: Final = (2, 3)
@@ -61,6 +67,9 @@ FAMILY_LABELS: Final = {
     "cec2009_uf": "CEC 2009 (UF)",
     "cec2009_cf": "CEC 2009 (CF)",
     "lz09_f": "LZ09",
+    "bin_knapsack": "Knapsack (binary)",
+    "bin_qubo": "QUBO (binary)",
+    "bin_feat": "Feature selection (binary)",
 }
 _FAMILY = re.compile(r"^(.*?)_?\d+$")
 ARGUMENT_LABELS: Final = {"n_var": "Variables", "n_obj": "Objectives"}
@@ -321,7 +330,7 @@ def _problem_entry(key: str) -> ProblemEntry:
         encoding=encoding,
         n_var=int(selection.n_var),
         n_obj=int(selection.n_obj),
-        available=SUPPORTED_PROBLEM_FAMILIES.get(family) == encoding,
+        available=encoding in SUPPORTED_PROBLEM_FAMILIES.get(family, ()),
         n_obj_options=SUPPORTED_N_OBJ if spec.allow_n_obj_override else (int(selection.n_obj),),
     )
 

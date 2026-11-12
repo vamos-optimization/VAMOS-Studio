@@ -1,0 +1,110 @@
+# NSGA-II for binary-coded problems, as a grammar (docs/design/parameter-spaces.md).
+#
+# Built from VAMOS 1.1.0's tuning space (build_nsgaii_binary_config_space) with these changes:
+# - M1: use_external_archive / archive_unbounded / archive_prune_policy become the categorical
+#   external_archive: none | unbounded | bounded(archive_prune_policy).
+# - M5: operator rates are global sub-parameters of their operator.
+# M2-M4 do not apply: no parameter is shared by some values only, every default is one of the
+# choices, and the binary operators have no parameters of their own. The defaults run exactly as
+# NSGAIIConfig.default(encoding="binary") (checked by tests/test_nsgaii_grammar.py).
+# - archive_subset_selection is not in VAMOS: the studio selects the result from an unbounded
+#   archive with VAMOS's subset-selection functions (see vamos_studio/backend/subset.py).
+# A drift-detection test checks this file against VAMOS's space.
+schema: vamos.parameter-space
+schema_version: 1.0.0
+name: nsgaii_binary
+algorithm: nsgaii
+encoding: binary
+description: NSGA-II for binary-coded problems.
+parameters:
+  pop_size:
+    type: int
+    default: 100
+    range: [20, 200]
+    log: true
+    role: population
+    label: Population size
+    description: Number of solutions in the population.
+  offspring_ratio:
+    type: categorical
+    default: 1.0
+    values: [0, 0.25, 0.5, 0.75, 1.0]
+    role: population
+    label: Offspring ratio
+    description: Offspring per generation, as a fraction of the population size (at least one).
+  selection:
+    type: categorical
+    default: tournament
+    role: structural
+    label: Selection
+    description: How parents are chosen for variation.
+    values:
+      tournament:
+        conditional_parameters:
+          selection_size:
+            type: int
+            default: 2
+            range: [2, 10]
+            role: structural
+            label: Tournament size
+            description: Number of candidates compared in each tournament.
+      random: {}
+      boltzmann: {}
+      ranking: {}
+      sus: {}
+  external_archive:
+    type: categorical
+    default: none
+    role: adaptive
+    label: External archive
+    description: Whether non-dominated solutions are kept in an archive besides the population; a bounded archive is as large as the population, and from an unbounded one the result keeps as many solutions as the population.
+    values:
+      none: {}
+      unbounded:
+        conditional_parameters:
+          archive_subset_selection:
+            type: categorical
+            default: farthest
+            values: [farthest, crowding, hv_greedy, kmeans, none]
+            role: structural
+            label: Subset selection
+            description: How the run's result is chosen from the unbounded archive, as many solutions as the population; none returns the whole archive.
+      bounded:
+        conditional_parameters:
+          archive_prune_policy:
+            type: categorical
+            default: crowding
+            values: [crowding, hv, mc_hv, knn, maxmin, ref_dirs]
+            role: adaptive
+            label: Pruning policy
+            description: How a full archive, as large as the population, discards solutions.
+  crossover:
+    type: categorical
+    default: uniform
+    role: operator
+    label: Crossover
+    description: The crossover operator of bit strings.
+    global_sub_parameters:
+      crossover_prob:
+        type: real
+        default: 0.9
+        range: [0.6, 1.0]
+        role: operator_rate
+        label: Crossover probability
+        description: Probability of applying the crossover to a pair of parents.
+    values: [hux, uniform, one_point, two_point]
+  mutation:
+    type: categorical
+    default: bitflip
+    role: operator
+    label: Mutation
+    description: The mutation operator of bit strings.
+    global_sub_parameters:
+      mutation_prob_factor:
+        type: real
+        default: 1.0
+        range: [0.25, 3.0]
+        role: operator_rate
+        label: Mutation probability factor
+        description: The probability of mutating each bit is this factor divided by their number.
+    values: [bitflip, segment_inversion]

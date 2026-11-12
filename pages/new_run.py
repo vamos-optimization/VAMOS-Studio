@@ -28,8 +28,8 @@ DEFAULT_PAUSE_EVERY = 5
 
 st.title("New run")
 st.info(
-    "Prototype: NSGA-II on the real-coded ZDT problems. The run goes on in the background: "
-    "follow it in the Monitor, and analyze it in Results.",
+    "Prototype: NSGA-II on the ZDT and DTLZ problems and on binary ones. The run goes on in the "
+    "background: follow it in the Monitor, and analyze it in Results.",
     icon=":material/construction:",
 )
 
@@ -192,7 +192,11 @@ if st.button(
         pause_every=pause_every,
         n_obj=details.n_obj if len(problem.n_obj_options) > 1 else None,
         n_var=details.n_var,
-        problem_kwargs={k: v for k, v in arguments.items() if k not in ("n_var", "n_obj")},
+        problem_kwargs={
+            name: value
+            for name, value in arguments.items()
+            if name not in ("n_var", "n_obj") and value != default_arguments(problem.key)[name]
+        },
     )
     run = runs.launch(request, runs.runs_directory())
     ui.select_run(run)

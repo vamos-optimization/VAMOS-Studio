@@ -24,14 +24,14 @@ class TestAlgorithms:
             "spea2",
         }
 
-    def test_should_make_only_nsgaii_for_real_problems_available(self):
+    def test_should_make_only_nsgaii_for_real_and_binary_problems_available(self):
         # Act
         available = {
             entry.key: entry.encodings for entry in catalogue.algorithm_entries() if entry.available
         }
 
         # Assert
-        assert available == {"nsgaii": ("real",)}
+        assert available == {"nsgaii": ("real", "binary")}
 
 
 class TestProblems:
@@ -43,14 +43,14 @@ class TestProblems:
         # Act / Assert
         assert catalogue.family_of(key) == family
 
-    def test_should_make_only_the_real_coded_zdt_and_dtlz_problems_available(self):
+    def test_should_make_the_zdt_dtlz_and_simple_binary_problems_available(self):
         # Act
         available = {entry.key for entry in catalogue.problem_entries() if entry.available}
 
         # Assert
-        assert available == {"zdt1", "zdt2", "zdt3", "zdt4", "zdt6"} | {
+        assert available == {f"zdt{number}" for number in range(1, 7)} | {
             f"dtlz{number}" for number in range(1, 8)
-        }
+        } | {"bin_knapsack", "bin_qubo", "bin_feat"}
 
     def test_should_offer_two_or_three_objectives_for_dtlz_only(self):
         # Act / Assert
@@ -71,13 +71,13 @@ class TestProblems:
         with pytest.raises(ValueError):
             catalogue.problem_details("dtlz2", 5)
 
-    def test_should_list_zdt5_as_binary_and_inactive(self):
+    def test_should_list_zdt5_as_binary_and_available(self):
         # Act
         entry = catalogue.problem_entry("zdt5")
 
         # Assert
         assert entry.encoding == "binary"
-        assert not entry.available
+        assert entry.available
 
     def test_should_give_the_bounds_and_reference_front_of_zdt4(self):
         # Act
