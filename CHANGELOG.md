@@ -37,6 +37,14 @@ Works with VAMOS 1.1.
   over the reference front), stop it keeping what it found, or cancel it; see why a run failed or
   was interrupted. With an external archive, the live front is the archive, which is what the run
   returns; otherwise, the non-dominated front of the population. The caption says which.
+- **Binary encoding**: NSGA-II's grammar for binary problems (`nsgaii_binary`: uniform, HUX,
+  one-point or two-point crossover and bit-flip or segment-inversion mutation), whose default
+  configuration runs exactly as VAMOS's default for binary problems. ZDT5 and the binary
+  knapsack, QUBO and feature-selection problems are available, with their arguments; Results shows
+  their variables as bits. Without a reference front, a run's indicators are not computed, and the
+  indicator sandbox offers only problems with one. A problem's arguments other than its variables
+  and objectives (such as knapsack's `capacity_ratio`) reach VAMOS through the problem's class,
+  since VAMOS 1.1 fails on them given a problem's id.
 - **Problem arguments**, as in Evolver-Studio: each problem's arguments are read from its VAMOS
   constructor, with their types and defaults (ZDT: variables; DTLZ: variables and objectives;
   ZCAT's six are ready for when the family is enabled). Explore › Problems lists them, and there

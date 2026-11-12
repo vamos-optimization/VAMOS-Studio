@@ -276,6 +276,15 @@ active by default. What it showed:
   1.0, whereas `main` uses 0.9, and `simplex_epsilon` ranges over [0.1, 1.0]. The pinned VAMOS
   series and the drift-detection tests (`tests/test_nsgaii_grammar.py`) catch such changes.
 
+### 7.1b Second grammar: `nsgaii_binary` (VAMOS 1.1.0)
+
+`vamos_studio/backend/upstream/spaces/nsgaii_binary.yaml` applies M1 and M5 to VAMOS 1.1.0's
+`build_nsgaii_binary_config_space()`; it has 11 parameters. M2-M4 do not apply: no parameter is
+shared by some values only, every VAMOS default is one of the choices (uniform crossover with
+probability 0.9, bit-flip mutation), and the binary operators have no parameters of their own. Its
+default configuration runs exactly as `NSGAIIConfig.default(encoding="binary")` on ZDT5, the
+binary knapsack and QUBO (G7).
+
 ### 7.2 Parameters the studio applies itself
 
 A grammar may hold parameters that VAMOS does not have, which the studio applies around the run.
