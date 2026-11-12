@@ -84,6 +84,7 @@ make lint    # ruff check . and ruff format --check .
 make format  # ruff format .
 make test    # pytest tests/ -x
 make run     # streamlit run app.py
+make sync-resources  # refresh the reference fronts copied from jMetal
 ```
 
 ## Conventions

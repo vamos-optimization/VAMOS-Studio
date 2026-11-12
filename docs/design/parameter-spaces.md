@@ -270,6 +270,8 @@ active by default. What it showed:
 - **M4:** the operators' own default arguments in VAMOS give a default to every parameter except
   two, which are marked PROVISIONAL: `gaussian_sigma` (no default in VAMOS) and
   `scatter_base_size_factor` (VAMOS uses 0.25, which is not one of the choices).
+- **Reference fronts.** VAMOS 1.1's ZDT reference fronts are inaccurate, so the studio measures
+  fronts against jMetal 7.11's, the files Evolver uses (`vamos_studio/resources/`).
 - **Defaults and ranges change between VAMOS versions.** In 1.1.0 the SBX probability defaults to
   1.0, whereas `main` uses 0.9, and `simplex_epsilon` ranges over [0.1, 1.0]. The pinned VAMOS
   series and the drift-detection tests (`tests/test_nsgaii_grammar.py`) catch such changes.

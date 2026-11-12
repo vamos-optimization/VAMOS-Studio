@@ -24,8 +24,11 @@ Works with VAMOS 1.1.
   epsilon and Δp are available, the others list why not yet. Fronts are normalized with their
   problem's reference front, as Evolver does, so values match Evolver-Studio's. A sandbox moves
   points of a ZDT reference front away from it and shows how each indicator responds.
-- **Explore › Problems** warns that VAMOS 1.1's ZDT reference fronts are inaccurate (up to 0.0146
-  for ZDT4), so indicators measured against them are not comparable with later VAMOS versions.
+- Fronts are measured against **jMetal's reference fronts** (release 7.11), the same files Evolver
+  and Evolver-Studio use, copied into the studio by `make sync-resources` with their checksums
+  and jMetal's license. VAMOS 1.1's ZDT samples are inaccurate (up to 0.0146 off the true front
+  for ZDT4, whose bounds are wrong too); jMetal's lie on the true fronts. Explore › Problems and
+  Explore › Quality indicators say where each front comes from.
 - Parameter spaces as grammars (`vamos.parameter-space` 1.0.0) and configurations as their
   derivations, with a validator, YAML serialization and content hashes; see
   `docs/design/parameter-spaces.md`.
