@@ -75,8 +75,8 @@ class TestProblems:
             catalogue.problem_entry("no_such_problem")
 
 
-class TestReferenceFrontDeviations:
-    """The documented inaccuracy of VAMOS 1.1's ZDT reference fronts, measured again."""
+class TestReferenceFronts:
+    """The reference fronts the studio measures against: jMetal's copy, on the true fronts."""
 
     ANALYTIC = {
         "zdt1": lambda f1: 1 - np.sqrt(f1),
@@ -87,7 +87,8 @@ class TestReferenceFrontDeviations:
     }
 
     @pytest.mark.parametrize("key", sorted(ANALYTIC))
-    def test_should_match_the_shipped_reference_front(self, key):
+    def test_should_lie_on_the_analytic_front(self, key):
+        """Within the precision of jMetal's files; VAMOS 1.1's are off by up to 0.0146."""
         # Arrange
         front = catalogue.reference_front(key, 2)
 
@@ -95,4 +96,21 @@ class TestReferenceFrontDeviations:
         deviation = np.max(np.abs(front[:, 1] - self.ANALYTIC[key](front[:, 0])))
 
         # Assert
-        assert round(float(deviation), 4) == catalogue.REFERENCE_FRONT_DEVIATIONS[key]
+        assert deviation < 1e-6
+
+    @pytest.mark.parametrize("key", sorted(ANALYTIC))
+    def test_should_come_from_jmetal_for_the_zdt_problems(self, key):
+        # Act / Assert
+        assert catalogue.reference_front_source(key) == "jMetal 7.11"
+
+    def test_should_fall_back_to_vamos_for_other_problems(self):
+        # Act / Assert
+        assert catalogue.reference_front_source("dtlz2").startswith("VAMOS ")
+
+    def test_should_report_where_the_front_of_a_problem_comes_from(self):
+        # Act
+        details = catalogue.problem_details("zdt4")
+
+        # Assert
+        assert details.reference_front_source == "jMetal 7.11"
+        assert details.reference_front.shape == (1000, 2)

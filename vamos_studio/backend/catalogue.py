@@ -19,6 +19,7 @@ from numpy.typing import NDArray
 from vamos.algorithms import available_algorithms
 from vamos.foundation.problem.resolver import resolve_reference_front_path
 
+from .bundled_resources import JMETAL_VERSION, reference_front_file
 from .upstream.vamos_bridge import BUILTIN_SPACES
 
 ENCODINGS: Final = ("real", "binary", "integer", "permutation", "mixed")
@@ -56,17 +57,6 @@ FAMILY_LABELS: Final = {
     "lz09_f": "LZ09",
 }
 _FAMILY = re.compile(r"^(.*?)_?\d+$")
-# VAMOS 1.1.0 ships inaccurate samples of some reference fronts (its docs/reference/problems.md,
-# "Replaced samples"; fixed after 1.1.0). For the ZDT fronts the studio supports: the largest
-# distance, in f2, between a point of the shipped file and the analytic front at the same f1.
-# tests/test_catalogue.py measures it again, so it fails once VAMOS ships the corrected files.
-REFERENCE_FRONT_DEVIATIONS: Final = {
-    "zdt1": 0.0006,
-    "zdt2": 0.0005,
-    "zdt3": 0.0016,
-    "zdt4": 0.0146,
-    "zdt6": 0.0023,
-}
 
 
 @dataclass(slots=True, frozen=True)
@@ -122,13 +112,15 @@ class ProblemDetails:
         entry: The problem.
         lower: The lower bound of each variable.
         upper: The upper bound of each variable.
-        reference_front: The reference front shipped with VAMOS, or None.
+        reference_front: Its reference front (see `reference_front`), or None.
+        reference_front_source: Where the reference front comes from, or None.
     """
 
     entry: ProblemEntry
     lower: NDArray[np.float64]
     upper: NDArray[np.float64]
     reference_front: NDArray[np.float64] | None
+    reference_front_source: str | None
 
 
 def algorithm_label(key: str) -> str:
@@ -183,16 +175,34 @@ def problem_details(key: str) -> ProblemDetails:
     problem = vamos.make_problem_selection(key).instantiate()
     lower = np.broadcast_to(np.asarray(problem.xl, dtype=float), (entry.n_var,))
     upper = np.broadcast_to(np.asarray(problem.xu, dtype=float), (entry.n_var,))
-    return ProblemDetails(entry, lower, upper, reference_front(key, entry.n_obj))
+    front = reference_front(key, entry.n_obj)
+    source = reference_front_source(key) if front is not None else None
+    return ProblemDetails(entry, lower, upper, front, source)
 
 
 def reference_front(key: str, n_obj: int) -> NDArray[np.float64] | None:
-    """The reference front VAMOS ships for `key` with `n_obj` objectives, or None."""
-    path = resolve_reference_front_path(key, None, n_obj=n_obj)
+    """The reference front of `key` with `n_obj` objectives, or None.
+
+    The studio's copy of jMetal's front comes first (see `bundled_resources`): VAMOS 1.1 ships
+    inaccurate samples of some fronts. Otherwise, the one VAMOS ships.
+    """
+    path = reference_front_file(key) or resolve_reference_front_path(key, None, n_obj=n_obj)
     if path is None:
         return None
     front = np.loadtxt(path, delimiter=",", ndmin=2)
     return front if front.shape[1] == n_obj else None
+
+
+def reference_front_source(key: str) -> str:
+    """Where the reference front of `key` comes from: jMetal's copy or VAMOS."""
+    if reference_front_file(key) is not None:
+        return f"jMetal {JMETAL_VERSION}"
+    return f"VAMOS {vamos_version_label()}"
+
+
+def vamos_version_label() -> str:
+    """The installed VAMOS version, for display."""
+    return str(getattr(vamos, "__version__", "")) or "(unknown version)"
 
 
 def _problem_entry(key: str) -> ProblemEntry:

@@ -5,9 +5,9 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from vamos_studio.backend.catalogue import (
-    REFERENCE_FRONT_DEVIATIONS,
     problem_entries,
     reference_front,
+    reference_front_source,
 )
 from vamos_studio.backend.indicators import INDICATORS, available_indicators, compute_all
 from vamos_studio.front_sample import sample_front
@@ -97,13 +97,10 @@ figure.add_trace(
 figure.update_layout(xaxis_title="f1", yaxis_title="f2", legend={"orientation": "h"})
 st.plotly_chart(figure, width="stretch")
 
-deviation = REFERENCE_FRONT_DEVIATIONS.get(problem.key)
-if deviation is not None:
-    st.caption(
-        f"The {problem.label} reference front shipped with VAMOS 1.1 has points up to "
-        f"{deviation} away from the true front (in f2), fixed in later VAMOS versions; values "
-        "measured against it are not comparable with those of other versions."
-    )
+st.caption(
+    f"Reference front: {len(front)} points from {reference_front_source(problem.key)}, the same "
+    "file Evolver-Studio uses, so the values match its."
+)
 
 with st.expander("Values as a table"):
     st.dataframe(
