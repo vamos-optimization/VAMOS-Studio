@@ -13,12 +13,13 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
 import threading
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Final
@@ -37,6 +38,8 @@ CANCELLED_FILE: Final = "cancelled"
 LIVE_FRONT_FILE: Final = "live_front.csv"
 ARTIFACT_DIRECTORY: Final = "run"
 WORKER_MODULE: Final = "vamos_studio.backend.worker"
+TRASH_DIRECTORY: Final = "trash"
+TRASH_MANIFEST: Final = "trash.json"
 
 
 class RunState(Enum):
@@ -351,3 +354,76 @@ def verify(run: SolveRun) -> Verification:
         replayability=str(report.effective_replayability),
         reasons=tuple(str(reason) for reason in report.reasons),
     )
+
+
+@dataclass(slots=True, frozen=True)
+class TrashedRun:
+    """A run moved to the trash.
+
+    Attributes:
+        run_id: Its identifier.
+        deleted_at: When it was moved to the trash (ISO 8601, UTC).
+        path: The directory of the trash that holds it.
+    """
+
+    run_id: str
+    deleted_at: str
+    path: Path
+
+
+def trash_directory(parent: Path) -> Path:
+    """The trash of the runs under `parent`."""
+    return parent / TRASH_DIRECTORY
+
+
+def move_to_trash(run: SolveRun) -> Path:
+    """Move a run to the trash, from where it can be restored.
+
+    Adapted from Transept (transept/runs.py, move_to_trash).
+
+    Raises:
+        ValueError: If the run is still active; cancel it first.
+    """
+    if state(run).active:
+        raise ValueError(f"Run {run.run_id} is still running: cancel it first.")
+    deleted_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+    target = trash_directory(run.directory.parent) / f"{stamp}_{run.run_id}"
+    target.mkdir(parents=True)
+    shutil.move(str(run.directory), str(target / run.run_id))
+    write_json(target / TRASH_MANIFEST, {"run_id": run.run_id, "deleted_at": deleted_at})
+    return target
+
+
+def list_trash(parent: Path) -> list[TrashedRun]:
+    """The runs in the trash of `parent`, most recently deleted first."""
+    root = trash_directory(parent)
+    if not root.is_dir():
+        return []
+    found = []
+    for directory in root.iterdir():
+        manifest = read_json(directory / TRASH_MANIFEST)
+        if manifest:
+            found.append(TrashedRun(manifest["run_id"], manifest["deleted_at"], directory))
+    return sorted(found, key=lambda item: item.path.name, reverse=True)
+
+
+def restore(parent: Path, trashed: TrashedRun) -> SolveRun:
+    """Move a run back from the trash.
+
+    Raises:
+        FileExistsError: If a run with the same identifier exists again.
+    """
+    run = SolveRun(parent / trashed.run_id)
+    if run.directory.exists():
+        raise FileExistsError(f"Run {trashed.run_id} exists again: delete it first.")
+    shutil.move(str(trashed.path / trashed.run_id), str(run.directory))
+    shutil.rmtree(trashed.path)
+    return run
+
+
+def empty_trash(parent: Path) -> int:
+    """Delete every run in the trash for good; return how many there were."""
+    trashed = list_trash(parent)
+    shutil.rmtree(trash_directory(parent), ignore_errors=True)
+    return len(trashed)
