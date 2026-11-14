@@ -199,19 +199,33 @@ def new_run_directory(parent: Path, now: datetime | None = None) -> Path:
     return candidate
 
 
-def launch(request: SolveRequest, parent: Path) -> SolveRun:
+def launch(
+    request: SolveRequest,
+    parent: Path,
+    *,
+    name: str | None = None,
+    snapshot_from: Path | None = None,
+) -> SolveRun:
     """Start a run in the background and return it.
 
     The worker gets its own session, so that it survives the browser and the app; its output goes
     to a log file, which tells why a run that never reported did not start.
+
+    Args:
+        request: What to run.
+        parent: The runs directory.
+        name: The run's identifier; by default, the time it is launched.
+        snapshot_from: A directory holding the copy of the approximate front to measure with
+            (a series copies it once for all its runs); by default, the front as it is now.
+
+    Raises:
+        FileExistsError: If a run called `name` exists.
+        ValueError: If the run is measured against an approximate front that does not exist.
     """
-    directory = new_run_directory(parent)
+    directory = parent / name if name else new_run_directory(parent)
     directory.mkdir(parents=True)
     if request.reference_front == "approximate":
-        front = approximate_fronts.load(parent, request.problem, run_arguments(request))
-        if front is None:
-            raise ValueError(f"There is no approximate front of {request.problem} to measure with.")
-        approximate_fronts.snapshot(front, directory)
+        copy_reference_front(request, parent, directory, snapshot_from)
     write_json(directory / REQUEST_FILE, request.to_dict())
     with (directory / LOG_FILE).open("w", encoding="utf-8") as log:
         process = subprocess.Popen(
@@ -225,6 +239,24 @@ def launch(request: SolveRequest, parent: Path) -> SolveRun:
     # Reap the process when it ends, so that it is not mistaken for a live one.
     threading.Thread(target=process.wait, daemon=True).start()
     return SolveRun(directory)
+
+
+def copy_reference_front(
+    request: SolveRequest, parent: Path, directory: Path, snapshot_from: Path | None
+) -> None:
+    """Give a run its copy of the approximate front it is measured with."""
+    if snapshot_from is not None:
+        for file_name in (
+            approximate_fronts.SNAPSHOT_FRONT_FILE,
+            approximate_fronts.SNAPSHOT_METADATA_FILE,
+        ):
+            shutil.copyfile(snapshot_from / file_name, directory / file_name)
+        return
+    front = approximate_fronts.load(parent, request.problem, run_arguments(request))
+    if front is None:
+        shutil.rmtree(directory, ignore_errors=True)
+        raise ValueError(f"There is no approximate front of {request.problem} to measure with.")
+    approximate_fronts.snapshot(front, directory)
 
 
 def write_json(path: Path, values: dict[str, Any]) -> None:
