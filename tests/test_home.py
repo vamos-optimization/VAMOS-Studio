@@ -30,13 +30,18 @@ class TestSections:
 
 class TestHomePage:
     @pytest.fixture
-    def app(self) -> AppTest:
+    def app(self, monkeypatch, tmp_path) -> AppTest:
+        monkeypatch.setenv("VAMOS_STUDIO_RUNS", str(tmp_path))
         return AppTest.from_file(str(APP_SCRIPT), default_timeout=30).run()
 
     def test_should_open_the_app_on_the_home_page_without_exceptions(self, app: AppTest):
         # Assert
         assert not app.exception
         assert app.title[0].value == "Explore, run and analyze"
+
+    def test_should_offer_a_first_run_in_one_click(self, app: AppTest):
+        # Assert
+        assert any(button.label == "Try NSGA-II on ZDT1" for button in app.button)
 
     def test_should_show_the_installed_vamos_version(self, app: AppTest):
         # Assert
