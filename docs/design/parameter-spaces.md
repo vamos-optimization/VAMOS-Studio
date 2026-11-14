@@ -285,6 +285,26 @@ probability 0.9, bit-flip mutation), and the binary operators have no parameters
 default configuration runs exactly as `NSGAIIConfig.default(encoding="binary")` on ZDT5, the
 binary knapsack and QUBO (G7).
 
+### 7.1c MOEA/D and SMS-EMOA (VAMOS 1.1.0)
+
+`moead_real` (21 parameters), `moead_binary` (13), `smsemoa_real` (28) and `smsemoa_binary` (11)
+apply M1, M2 and M5 where they apply, and a new change:
+
+- **M8:** `mutation_prob`, an absolute probability whose VAMOS default is 1/n, becomes
+  `mutation_prob_factor` (probability = factor / number of variables), as in NSGA-II. A default
+  that depends on the problem cannot be a constant of the grammar; a factor can. Turning it into
+  a probability needs the problem's number of variables, so `to_algorithm_config` takes the
+  problem's `n_var` and `n_obj`.
+
+MOEA/D with three or more objectives reads jMetal's weight vector file for its population, as
+jMetal and Evolver do; VAMOS's default generates a Das-Dennis lattice instead, so the grammar's
+default (population 100, `W3D_100.dat`) deliberately differs from it. SMS-EMOA's grammar adds
+`selection` (random or tournament) and `reference_point_offset`, which VAMOS's tuning space lacks,
+so that VAMOS's default (random selection, offset 1.0) can be expressed; the studio builds
+`SMSEMOAConfig` itself. VAMOS has no binary defaults for these two algorithms: the binary
+grammars use NSGA-II's binary operators. G7 holds for the real-coded grammars on ZDT1, ZDT4 and
+DTLZ2 (MOEA/D with three objectives, against VAMOS with jMetal's weight file).
+
 ### 7.2 Parameters the studio applies itself
 
 A grammar may hold parameters that VAMOS does not have, which the studio applies around the run.

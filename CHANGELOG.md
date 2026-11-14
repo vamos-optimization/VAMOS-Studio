@@ -37,6 +37,15 @@ Works with VAMOS 1.1.
   over the reference front), stop it keeping what it found, or cancel it; see why a run failed or
   was interrupted. With an external archive, the live front is the archive, which is what the run
   returns; otherwise, the non-dominated front of the population. The caption says which.
+- **MOEA/D and SMS-EMOA**, for real-coded and binary problems, with their grammars
+  (`moead_real`, `moead_binary`, `smsemoa_real`, `smsemoa_binary`). Their mutation probability is
+  a factor of 1/n, as NSGA-II's. With three or more objectives MOEA/D reads jMetal's weight vector
+  file for its population (`W<m>D_<population>.dat`, shipped with VAMOS), as jMetal and Evolver
+  do: New run says which file and which populations have one. SMS-EMOA is built by the studio
+  itself, so that its grammar can express VAMOS's default (random selection, reference point
+  offset 1.0). The real-coded defaults run exactly as VAMOS's (MOEA/D with three objectives, as it
+  with jMetal's file); VAMOS has no binary defaults for them, so theirs are NSGA-II's binary ones.
+  NSGA-II stays the default algorithm. At the end of any run, the Monitor shows its result.
 - **Series of independent runs**, as in Transept: New run launches several runs of the same
   configuration with consecutive seeds, a chosen number at a time, through a background process
   that survives the browser. A series measured against an approximate front copies it once, so all
