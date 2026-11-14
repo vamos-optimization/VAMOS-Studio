@@ -16,7 +16,7 @@ class Page:
     Attributes:
         path: Its script, relative to the app's root (e.g. "pages/solve.py").
         title: Its title in the menu and on its card.
-        icon: Its icon in the menu and on its card.
+        icon: Its Material icon in the menu and on its card (":material/<name>:").
         description: What it does, for its card on the home page.
         available: Whether it is implemented, or only a placeholder.
     """
@@ -48,7 +48,7 @@ SECTIONS = (
             Page(
                 "pages/explore_algorithms.py",
                 "Algorithms",
-                "🧬",
+                ":material/account_tree:",
                 "Browse VAMOS's multi-objective algorithms and the parameters each one can be "
                 "configured with, for each encoding.",
                 available=True,
@@ -56,7 +56,7 @@ SECTIONS = (
             Page(
                 "pages/explore_problems.py",
                 "Problems",
-                "🧩",
+                ":material/extension:",
                 "The benchmark and real-world problems available in VAMOS, with their encoding, "
                 "objectives, variables and reference fronts.",
                 available=True,
@@ -64,7 +64,7 @@ SECTIONS = (
             Page(
                 "pages/explore_indicators.py",
                 "Quality indicators",
-                "📏",
+                ":material/straighten:",
                 "The quality indicators of VAMOS, what each one measures and how the studio "
                 "normalizes fronts, with a sandbox to see how they respond.",
                 available=True,
@@ -77,7 +77,7 @@ SECTIONS = (
             Page(
                 "pages/new_run.py",
                 "New run",
-                "▶️",
+                ":material/play_circle:",
                 "Choose a problem and an algorithm, adjust its configuration from the default one, "
                 "set the budget and launch the run in the background.",
                 available=True,
@@ -85,7 +85,7 @@ SECTIONS = (
             Page(
                 "pages/monitor.py",
                 "Monitor",
-                "📡",
+                ":material/monitor_heart:",
                 "Follow a run live, with its front as it evolves; stop it keeping what it found, "
                 "or cancel it.",
                 available=True,
@@ -93,7 +93,7 @@ SECTIONS = (
             Page(
                 "pages/history.py",
                 "History",
-                "🗂️",
+                ":material/history:",
                 "Every run with its state, problem, algorithm and budget; open one in the monitor "
                 "or in the results.",
                 available=True,
@@ -106,7 +106,7 @@ SECTIONS = (
             Page(
                 "pages/results.py",
                 "Results",
-                "📈",
+                ":material/insights:",
                 "The front a run found, with its knee and extremes, its quality indicators, its "
                 "solutions to download, and how VAMOS ran it.",
                 available=True,
@@ -114,7 +114,7 @@ SECTIONS = (
             Page(
                 "pages/series_results.py",
                 "Independent runs",
-                "🧮",
+                ":material/stacked_line_chart:",
                 "The runs of a series: their fronts and their union, and the quality indicators "
                 "of each run with their median, spread and best run.",
                 available=True,
