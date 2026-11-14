@@ -167,6 +167,15 @@ class ProblemDetails:
     reference_front_source: str | None
 
 
+DEFAULT_ALGORITHM: Final = "nsgaii"
+
+
+def default_algorithm_index(entries: list[AlgorithmEntry]) -> int:
+    """Where the default algorithm (NSGA-II) is among `entries`, or 0."""
+    keys = [entry.key for entry in entries]
+    return keys.index(DEFAULT_ALGORITHM) if DEFAULT_ALGORITHM in keys else 0
+
+
 def algorithm_label(key: str) -> str:
     """The display name of a VAMOS algorithm."""
     return ALGORITHM_LABELS.get(key, key.upper())

@@ -3,7 +3,12 @@
 import pandas as pd
 import streamlit as st
 
-from vamos_studio.backend.catalogue import ENCODING_LABELS, ENCODINGS, algorithm_entries
+from vamos_studio.backend.catalogue import (
+    ENCODING_LABELS,
+    ENCODINGS,
+    algorithm_entries,
+    default_algorithm_index,
+)
 from vamos_studio.backend.upstream.vamos_bridge import builtin_space
 from vamos_studio.parameter_tree import parameter_rows, summarize, tree_markdown
 
@@ -14,8 +19,8 @@ st.markdown(
     "own parameters."
 )
 st.info(
-    "Prototype: only **NSGA-II**, for **real-coded** and **binary** problems, is available. The "
-    "other algorithms and encodings are listed but not active yet.",
+    "Prototype: **NSGA-II**, **MOEA/D** and **SMS-EMOA** are available, for **real-coded** and "
+    "**binary** problems. The other algorithms and encodings are listed but not active yet.",
     icon=":material/construction:",
 )
 
@@ -34,7 +39,12 @@ with st.expander("Availability: ✅ available · ⏳ coming soon", expanded=Fals
 
 available = [entry for entry in entries if entry.available]
 left, right = st.columns(2)
-entry = left.selectbox("Algorithm", available, format_func=lambda item: item.label)
+entry = left.selectbox(
+    "Algorithm",
+    available,
+    index=default_algorithm_index(available),
+    format_func=lambda item: item.label,
+)
 encoding = right.selectbox("Encoding", entry.encodings, format_func=ENCODING_LABELS.get)
 space = builtin_space(entry.key, encoding)
 

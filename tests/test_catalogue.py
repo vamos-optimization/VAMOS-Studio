@@ -24,14 +24,18 @@ class TestAlgorithms:
             "spea2",
         }
 
-    def test_should_make_only_nsgaii_for_real_and_binary_problems_available(self):
+    def test_should_make_nsgaii_moead_and_smsemoa_available_for_real_and_binary_problems(self):
         # Act
         available = {
             entry.key: entry.encodings for entry in catalogue.algorithm_entries() if entry.available
         }
 
         # Assert
-        assert available == {"nsgaii": ("real", "binary")}
+        assert available == {
+            "nsgaii": ("real", "binary"),
+            "moead": ("real", "binary"),
+            "smsemoa": ("real", "binary"),
+        }
 
 
 class TestProblems:

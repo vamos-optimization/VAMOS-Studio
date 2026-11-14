@@ -16,12 +16,14 @@ def algorithms_app() -> AppTest:
 
 
 class TestAlgorithmsPage:
-    def test_should_offer_only_nsgaii_for_real_and_binary_problems(self, algorithms_app: AppTest):
+    def test_should_offer_the_available_algorithms_starting_at_nsgaii(
+        self, algorithms_app: AppTest
+    ):
         # Assert
-        assert [box.options for box in algorithms_app.selectbox] == [
-            ["NSGA-II"],
-            ["Real", "Binary"],
-        ]
+        algorithm, encoding = algorithms_app.selectbox
+        assert algorithm.options == ["MOEA/D", "NSGA-II", "SMS-EMOA"]
+        assert algorithm.value.label == "NSGA-II"
+        assert encoding.options == ["Real", "Binary"]
 
     def test_should_show_the_default_configuration_as_a_command_line(self, algorithms_app: AppTest):
         # Act

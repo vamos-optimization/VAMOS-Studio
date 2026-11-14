@@ -12,6 +12,7 @@ from vamos_studio import ui
 from vamos_studio.backend import approximate_fronts, runs, series
 from vamos_studio.backend.catalogue import (
     algorithm_entries,
+    default_algorithm_index,
     default_arguments,
     problem_details,
     problem_entries,
@@ -19,7 +20,12 @@ from vamos_studio.backend.catalogue import (
     reference_front_source,
 )
 from vamos_studio.backend.upstream.parameter_space import Parameter, ParameterSpace
-from vamos_studio.backend.upstream.vamos_bridge import builtin_space
+from vamos_studio.backend.upstream.vamos_bridge import (
+    builtin_space,
+    weight_file,
+    weight_population,
+    weight_populations,
+)
 from vamos_studio.configuration_form import active_fields, changes, configuration_of
 from vamos_studio.live_view import estimated_generations, pause_overhead
 from vamos_studio.parameter_tree import format_value
@@ -33,8 +39,8 @@ DEFAULT_PAUSE_EVERY = 5
 
 st.title("New run")
 st.info(
-    "Prototype: NSGA-II on the ZDT and DTLZ problems and on binary ones. The run goes on in the "
-    "background: follow it in the Monitor, and analyze it in Results.",
+    "Prototype: NSGA-II, MOEA/D and SMS-EMOA on the ZDT and DTLZ problems and on binary ones. "
+    "The run goes on in the background: follow it in the Monitor, and analyze it in Results.",
     icon=":material/construction:",
 )
 
@@ -163,11 +169,27 @@ reference_choice, contribute = render_reference_front(
 
 st.subheader("2. Algorithm")
 algorithms = [entry for entry in algorithm_entries() if problem.encoding in entry.encodings]
-algorithm = st.selectbox("Algorithm", algorithms, format_func=lambda item: item.label)
+algorithm = st.selectbox(
+    "Algorithm",
+    algorithms,
+    index=default_algorithm_index(algorithms),
+    format_func=lambda item: item.label,
+)
 space = builtin_space(algorithm.key, problem.encoding)
 
 st.subheader("3. Configuration")
 configuration = render_configuration(space)
+
+if algorithm.key == "moead" and details.n_obj >= 3:
+    asked = int(configuration.values["pop_size"])
+    population = weight_population(asked, details.n_obj)
+    sizes = ", ".join(str(size) for size in weight_populations(details.n_obj))
+    st.caption(
+        f"MOEA/D reads its {population} weight vectors from {weight_file(asked, details.n_obj)}, "
+        f"jMetal's file shipped with VAMOS, as jMetal and Evolver do"
+        + ("." if population == asked else f": there is none for {asked}.")
+        + f" Populations with a file for {details.n_obj} objectives: {sizes}."
+    )
 
 st.subheader("4. Budget")
 left, right = st.columns(2)

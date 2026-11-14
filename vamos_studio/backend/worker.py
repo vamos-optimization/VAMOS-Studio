@@ -28,6 +28,7 @@ from .runs import (
     SolveRun,
     contribute,
     read_request,
+    run_arguments,
     write_json,
 )
 from .upstream.vamos_bridge import builtin_space, to_algorithm_config
@@ -120,7 +121,8 @@ class FileProgress:
     def show_final(self, front: np.ndarray, archive_size: int) -> None:
         """Make `front`, the run's result, the live front written at the end."""
         self._front = front
-        self.archive_size = archive_size
+        if self.live_source != "population":
+            self.archive_size = archive_size
 
     def should_stop(self) -> bool:
         if (self.directory / STOP_FILE).is_file():
@@ -210,7 +212,12 @@ def solve(request: SolveRequest, progress: FileProgress) -> Any:
         raise ValueError(f"No grammar for {request.algorithm} with {request.encoding} encoding.")
     if space.content_hash() != request.space_hash:
         raise ValueError(f"The grammar {space.name} changed since the run was requested.")
-    config = with_live_archive(to_algorithm_config(space.configuration(request.configuration)))
+    arguments = run_arguments(request)
+    config = with_live_archive(
+        to_algorithm_config(
+            space.configuration(request.configuration), arguments["n_var"], arguments["n_obj"]
+        )
+    )
     if getattr(config, "live_callback_mode", None) == ARCHIVE_LIVE_MODE:
         progress.live_source = "archive"
         if subset.method_of(request.configuration) is not None:
@@ -282,8 +289,9 @@ def run(directory: Path, min_interval: float = MIN_WRITE_INTERVAL_SECONDS) -> in
         result = solve(request, progress)
         vamos.save_result(result, run_.artifact)
         selected = save_selection(directory, request, result)
-        if selected is not None:
-            progress.show_final(selected, len(np.asarray(result.front())))
+        whole = np.asarray(result.front(), dtype=float)
+        # The Monitor ends showing the run's result, whatever its live callback could report.
+        progress.show_final(whole if selected is None else selected, len(whole))
         if request.contribute:
             add_to_approximate_front(run_)
     except Exception as error:  # noqa: BLE001 - report any failure to the app

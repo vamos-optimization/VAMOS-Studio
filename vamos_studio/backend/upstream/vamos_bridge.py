@@ -4,27 +4,58 @@ Upstream target: the per-algorithm builders of ``vamos.algorithms`` that turn a 
 into ``NSGAIIConfig`` and the rest (today ``config_from_assignment`` plays this role), and the
 grammars shipped as VAMOS resources. Status: local. Design: ``docs/design/parameter-spaces.md``.
 
-The grammars rename a few parameters of VAMOS 1.1's tuning spaces (changes M1 and M2 of the
-design); `to_vamos_assignment` maps them back, so VAMOS builds the configuration itself.
+The grammars rename a few parameters of VAMOS 1.1's tuning spaces (changes M1, M2 and M8 of the
+design); `to_vamos_assignment` maps them back, so VAMOS builds the configuration itself. Two
+algorithms need more than that:
+
+- MOEA/D: its mutation probability is a factor of 1/n (M8), and with three or more objectives it
+  reads its weight vectors from jMetal's files shipped with VAMOS (`W<m>D_<population>.dat`), as
+  jMetal and Evolver do: the population is one with a file. VAMOS 1.1 reads those files only
+  when given their directory; without it, its default generates a Das-Dennis lattice (91 vectors
+  for three objectives, the vectors of W3D_91.dat to rounding), so a population of 100 differs
+  from jMetal's.
+- SMS-EMOA: VAMOS 1.1's tuning bridge always selects by tournament with a reference point offset
+  of 0.1, while its default selects at random with an offset of 1.0, so the studio builds
+  `SMSEMOAConfig` itself, with VAMOS's builder and VAMOS's helpers for the operators.
 """
 
 from __future__ import annotations
 
+import dataclasses
+import re
 from functools import cache
 from importlib.resources import files
+from pathlib import Path
 from typing import Any, Final
 
+from vamos.algorithms import SMSEMOAConfig
 from vamos.engine.algorithm.config.types import AlgorithmConfigProtocol
+from vamos.engine.tuning.racing._bridge_assignment_shared import (
+    apply_initializer,
+    apply_optional_external_archive,
+    apply_optional_repair,
+    extend_crossover_params,
+    extend_mutation_params,
+)
 from vamos.engine.tuning.racing.bridge_assignments import config_from_assignment
 
 from .parameter_space import Configuration, ParameterSpace, space_from_yaml
 
 SPACES_PACKAGE: Final = "vamos_studio.backend.upstream.spaces"
 # Grammars shipped with the studio, as (algorithm, encoding).
-BUILTIN_SPACES: Final = (("nsgaii", "real"), ("nsgaii", "binary"))
+BUILTIN_SPACES: Final = (
+    ("nsgaii", "real"),
+    ("nsgaii", "binary"),
+    ("moead", "real"),
+    ("moead", "binary"),
+    ("smsemoa", "real"),
+    ("smsemoa", "binary"),
+)
 
 # Parameters of the grammars that VAMOS does not have: the studio applies them itself.
 STUDIO_ONLY_PARAMETERS: Final = frozenset({"archive_subset_selection"})
+# Parameters of the SMS-EMOA grammars that its constructor applies (not in VAMOS's space).
+SMSEMOA_ONLY_PARAMETERS: Final = frozenset({"selection", "reference_point_offset"})
 # M2: parameters duplicated per production, and the single VAMOS parameter they come from.
 _RENAMED_TO_VAMOS: Final = {
     "polynomial_eta": "mutation_eta",
@@ -66,11 +97,112 @@ def to_vamos_assignment(configuration: Configuration) -> dict[str, Any]:
     return assignment
 
 
-def to_algorithm_config(configuration: Configuration) -> AlgorithmConfigProtocol:
-    """The VAMOS algorithm configuration that `configuration` describes."""
+def to_algorithm_config(
+    configuration: Configuration, n_var: int | None = None, n_obj: int | None = None
+) -> AlgorithmConfigProtocol:
+    """The VAMOS algorithm configuration that `configuration` describes for a problem.
+
+    Args:
+        configuration: A configuration of a built-in grammar.
+        n_var: The problem's number of variables: MOEA/D and SMS-EMOA need it to turn the
+            mutation probability factor into a probability.
+        n_obj: The problem's number of objectives: MOEA/D needs it for its population.
+
+    Raises:
+        ValueError: If the algorithm needs `n_var` and it is not given.
+    """
     space = configuration.space
     vamos_space = space.algorithm if space.encoding == "real" else space.name
-    return config_from_assignment(vamos_space, to_vamos_assignment(configuration))
+    assignment = to_vamos_assignment(configuration)
+    if space.algorithm == "moead":
+        assignment["mutation_prob"] = mutation_probability(assignment, n_var)
+        assignment["pop_size"] = weight_population(int(assignment["pop_size"]), n_obj or 2)
+        return with_weight_files(config_from_assignment(vamos_space, assignment), n_obj or 2)
+    if space.algorithm == "smsemoa":
+        return smsemoa_config(assignment, n_var)
+    return config_from_assignment(vamos_space, assignment)
+
+
+def mutation_probability(assignment: dict[str, Any], n_var: int | None) -> float:
+    """M8: the probability of mutating each variable, from its factor of 1/n."""
+    if n_var is None:
+        raise ValueError("The mutation probability needs the problem's number of variables.")
+    return float(assignment.pop("mutation_prob_factor")) / n_var
+
+
+_WEIGHT_FILE: Final = re.compile(r"W(\d+)D_(\d+)\.dat")
+
+
+def weights_directory() -> Path:
+    """The directory of jMetal's weight vector files that VAMOS ships."""
+    return Path(str(files("vamos") / "resources" / "weights"))
+
+
+@cache
+def weight_populations(n_obj: int) -> tuple[int, ...]:
+    """The population sizes there is a weight vector file for, with `n_obj` objectives."""
+    sizes = []
+    for path in weights_directory().iterdir():
+        match = _WEIGHT_FILE.fullmatch(path.name)
+        if match and int(match.group(1)) == n_obj:
+            sizes.append(int(match.group(2)))
+    return tuple(sorted(sizes))
+
+
+def weight_population(pop_size: int, n_obj: int) -> int:
+    """MOEA/D's population for `pop_size`: one with a weight vector file, as in jMetal.
+
+    With two objectives the weights are uniform and any size works. With more, the size has a
+    file if there is one; otherwise the largest size with a file up to it, or the smallest.
+    """
+    if n_obj < 3:
+        return pop_size
+    sizes = weight_populations(n_obj)
+    if not sizes:
+        raise ValueError(f"VAMOS ships no weight vector file for {n_obj} objectives.")
+    fitting = [size for size in sizes if size <= pop_size]
+    return fitting[-1] if fitting else sizes[0]
+
+
+def weight_file(pop_size: int, n_obj: int) -> str | None:
+    """The weight vector file MOEA/D reads for a population, or None with two objectives."""
+    if n_obj < 3:
+        return None
+    return f"W{n_obj}D_{weight_population(pop_size, n_obj)}.dat"
+
+
+def with_weight_files(config: Any, n_obj: int) -> Any:
+    """MOEA/D's configuration reading jMetal's weight files, with three or more objectives."""
+    if n_obj < 3:
+        return config
+    path = str(weights_directory())
+    return dataclasses.replace(config, weight_vectors={"path": path, "divisions": None})
+
+
+def smsemoa_config(assignment: dict[str, Any], n_var: int | None) -> AlgorithmConfigProtocol:
+    """SMS-EMOA's configuration, built with VAMOS's builder and its helpers for the operators."""
+    builder = SMSEMOAConfig.builder()
+    pop_size = int(assignment["pop_size"])
+    builder.pop_size(pop_size)
+    apply_initializer(builder, assignment, pop_size)
+    crossover = str(assignment["crossover"])
+    crossover_params: dict[str, Any] = {}
+    if "crossover_prob" in assignment:
+        crossover_params["prob"] = float(assignment["crossover_prob"])
+    extend_crossover_params(crossover, assignment, crossover_params)
+    builder.crossover(crossover, **crossover_params)
+    mutation = str(assignment["mutation"])
+    mutation_params: dict[str, Any] = {"prob": mutation_probability(assignment, n_var)}
+    extend_mutation_params(mutation, assignment, mutation_params)
+    builder.mutation(mutation, **mutation_params)
+    if assignment["selection"] == "tournament":
+        builder.selection("tournament", size=int(assignment["selection_pressure"]))
+    else:
+        builder.selection("random")
+    builder.reference_point(offset=float(assignment["reference_point_offset"]), adaptive=True)
+    apply_optional_repair(builder, assignment)
+    apply_optional_external_archive(builder, assignment, pop_size)
+    return builder.build()
 
 
 def _archive_assignment(choice: str) -> dict[str, bool]:

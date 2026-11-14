@@ -1,0 +1,195 @@
+# MOEA/D for real-coded problems, as a grammar (docs/design/parameter-spaces.md).
+#
+# Built from VAMOS 1.1.0's tuning space (build_moead_config_space) with these changes:
+# - M1: use_external_archive / archive_unbounded / archive_prune_policy become the categorical
+#   external_archive: none | unbounded | bounded(archive_prune_policy).
+# - M8: mutation_prob, an absolute probability whose VAMOS default is 1/n, becomes
+#   mutation_prob_factor (probability = factor / number of variables), as in NSGA-II: the studio
+#   converts it with the problem's variables (vamos_bridge.to_algorithm_config).
+# - With three or more objectives MOEA/D reads jMetal's weight vector file for its population
+#   (W<m>D_<population>.dat, shipped with VAMOS), as jMetal and Evolver do; VAMOS's default
+#   generates a Das-Dennis lattice instead (91 vectors with three objectives: W3D_91.dat's, to rounding).
+# With two objectives the defaults run exactly as MOEADConfig.default(); with three or more they
+# run as it with jMetal's weight file (checked by tests/test_more_grammars.py).
+# - archive_subset_selection is not in VAMOS: the studio selects the result from an unbounded
+#   archive with VAMOS's subset-selection functions (see vamos_studio/backend/subset.py).
+# A drift-detection test checks this file against VAMOS's space.
+schema: vamos.parameter-space
+schema_version: 1.0.0
+name: moead_real
+algorithm: moead
+encoding: real
+description: MOEA/D for real-coded problems.
+parameters:
+  pop_size:
+    type: int
+    default: 100
+    range: [20, 200]
+    log: true
+    role: population
+    label: Population size
+    description: Number of solutions in the population. With three or more objectives, one with a weight vector file (the largest up to it).
+  neighbor_size:
+    type: int
+    default: 20
+    range: [5, 40]
+    role: population
+    label: Neighborhood size
+    description: Number of neighboring subproblems a subproblem mates and replaces within.
+  delta:
+    type: real
+    default: 0.9
+    range: [0.5, 0.95]
+    role: operator_rate
+    label: Neighborhood probability
+    description: Probability of choosing parents from the neighborhood instead of the whole population.
+  replace_limit:
+    type: int
+    default: 2
+    range: [1, 5]
+    role: population
+    label: Replacement limit
+    description: Most neighbors an offspring may replace.
+  aggregation:
+    type: categorical
+    default: pbi
+    role: structural
+    label: Aggregation
+    description: How the objectives of a subproblem are aggregated.
+    values:
+      tchebycheff: {}
+      weighted_sum: {}
+      pbi:
+        conditional_parameters:
+          pbi_theta:
+            type: real
+            default: 5.0
+            range: [1.0, 10.0]
+            role: operator_rate
+            label: Penalty
+            description: PBI penalty on the distance from the weight vector.
+  external_archive:
+    type: categorical
+    default: none
+    role: adaptive
+    label: External archive
+    description: Whether non-dominated solutions are kept in an archive besides the population; a bounded archive is as large as the population, and from an unbounded one the result keeps as many solutions as the population.
+    values:
+      none: {}
+      unbounded:
+        conditional_parameters:
+          archive_subset_selection:
+            type: categorical
+            default: farthest
+            values: [farthest, crowding, hv_greedy, kmeans, none]
+            role: structural
+            label: Subset selection
+            description: How the run's result is chosen from the unbounded archive, as many solutions as the population; none returns the whole archive.
+      bounded:
+        conditional_parameters:
+          archive_prune_policy:
+            type: categorical
+            default: crowding
+            values: [crowding, hv, mc_hv, knn, maxmin, ref_dirs]
+            role: adaptive
+            label: Pruning policy
+            description: How a full archive, as large as the population, discards solutions.
+  crossover:
+    type: categorical
+    default: de
+    role: operator
+    label: Crossover
+    description: The variation operator.
+    values:
+      de:
+        conditional_parameters:
+          de_cr:
+            type: real
+            default: 1.0
+            range: [0.0, 1.0]
+            role: operator_rate
+            label: CR
+            description: Differential evolution crossover rate.
+          de_f:
+            type: real
+            default: 0.5
+            range: [0.0, 1.0]
+            role: operator_rate
+            label: F
+            description: Differential evolution scale factor.
+      sbx:
+        conditional_parameters:
+          crossover_prob:
+            type: real
+            default: 1.0
+            range: [0.6, 1.0]
+            role: operator_rate
+            label: Crossover probability
+            description: Probability of applying the crossover to a pair of parents.
+          crossover_eta:
+            type: real
+            default: 20.0
+            range: [10.0, 40.0]
+            role: operator_rate
+            label: Distribution index
+            description: SBX distribution index; larger values give offspring closer to parents.
+  mutation:
+    type: categorical
+    default: polynomial
+    role: operator
+    label: Mutation
+    description: The mutation operator.
+    global_sub_parameters:
+      mutation_prob_factor:
+        type: real
+        default: 1.0
+        range: [0.25, 3.0]
+        role: operator_rate
+        label: Mutation probability factor
+        description: The probability of mutating each variable is this factor divided by their number.
+    values:
+      polynomial:
+        conditional_parameters:
+          mutation_eta:
+            type: real
+            default: 20.0
+            range: [5.0, 40.0]
+            role: operator_rate
+            label: Distribution index
+            description: Polynomial mutation distribution index; larger values give smaller steps.
+      non_uniform:
+        conditional_parameters:
+          nonuniform_perturbation:
+            type: real
+            default: 0.5
+            range: [0.05, 0.5]
+            role: operator_rate
+            label: Perturbation
+            description: Size of the non-uniform mutation steps, which shrink over the run.
+      gaussian:
+        conditional_parameters:
+          gaussian_sigma:
+            type: real
+            default: 0.1  # PROVISIONAL: the VAMOS operator has no default sigma.
+            range: [0.001, 0.5]
+            role: operator_rate
+            label: Sigma
+            description: Standard deviation of the Gaussian steps, relative to the variable range.
+      cauchy:
+        conditional_parameters:
+          cauchy_gamma:
+            type: real
+            default: 0.1
+            range: [0.001, 0.5]
+            role: operator_rate
+            label: Gamma
+            description: Scale of the Cauchy steps.
+      uniform:
+        conditional_parameters:
+          uniform_perturb:
+            type: real
+            default: 0.1
+            range: [0.01, 0.5]
+            role: operator_rate
+            label: Perturbation
+            description: Maximum size of the uniform steps, relative to the variable range.
