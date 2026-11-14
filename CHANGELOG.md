@@ -37,6 +37,14 @@ Works with VAMOS 1.1.
   over the reference front), stop it keeping what it found, or cancel it; see why a run failed or
   was interrupted. With an external archive, the live front is the archive, which is what the run
   returns; otherwise, the non-dominated front of the population. The caption says which.
+- **Series of independent runs**, as in Transept: New run launches several runs of the same
+  configuration with consecutive seeds, a chosen number at a time, through a background process
+  that survives the browser. A series measured against an approximate front copies it once, so all
+  its runs use the same version. The Monitor follows a series (its runs, their progress, stop or
+  cancel), History shows which series each run belongs to and deletes whole series, and the new
+  **Analyze › Independent runs** page shows the fronts of its runs and their union, and each run's
+  quality indicators with their median, interquartile range, mean, standard deviation, minimum and
+  maximum, to download, with the best run by any indicator.
 - **Approximate reference fronts**, for problems without a known front (the binary knapsack,
   QUBO and feature selection) or with arguments that change it, and for any other at the user's
   choice. A run can add its non-dominated solutions (its whole archive) to the approximate front
