@@ -36,7 +36,7 @@ class TestHomePage:
     def test_should_open_the_app_on_the_home_page_without_exceptions(self, app: AppTest):
         # Assert
         assert not app.exception
-        assert app.title[0].value == "VAMOS-Studio"
+        assert app.title[0].value == "Explore, run and analyze"
 
     def test_should_show_the_installed_vamos_version(self, app: AppTest):
         # Assert
