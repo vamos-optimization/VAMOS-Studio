@@ -10,8 +10,14 @@ Works with VAMOS 1.1.
 
 ### Added
 
-- The app's shell: a home page with a card for each page, and the Explore, Optimize and Analyze
-  sections, organized as Transept's.
+- The app's shell: a home page and the Explore, Optimize and Analyze sections, organized as
+  Transept's, in a menu along the top with Material icons.
+- **The VAMOS logo and colors**: the logo heads the menu and the home page, its V is the tab's
+  icon, and the theme takes its colors (blue to teal on navy) and typefaces (Montserrat and IBM
+  Plex Sans).
+- **Home** as a panel of the studio: DTLZ2's front, a first run in one click (NSGA-II on ZDT1,
+  followed in the Monitor), counts of runs and series, the run in progress and the latest runs
+  with their state, first steps, the news of this changelog, and a card for each page.
 - **Explore › Algorithms** (prototype): the parameter space of NSGA-II for real-coded problems
   as a grammar, shown as a tree, as a table of parameters with when each one is active, as its
   default configuration (a command line that runs exactly as VAMOS's default NSGA-II) and as
