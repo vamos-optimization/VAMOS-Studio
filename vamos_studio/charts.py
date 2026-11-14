@@ -153,3 +153,36 @@ def _scatter_3d(
         opacity=opacity,
         marker={"size": size, "color": colour},
     )
+
+
+def series_figure(
+    fronts: list[Front], aggregate: Front, reference_front: Front | None = None
+) -> go.Figure:
+    """The fronts of a series' runs in grey and their non-dominated union in blue.
+
+    As Transept draws the runs of a series (transept/charts.py, series_front_figure).
+    """
+    three = n_objectives(aggregate, reference_front) == 3
+    figure = go.Figure()
+    if reference_front is not None:
+        figure.add_trace(_any_scatter(reference_front, "Reference front", "#e3e6ea", 2, three))
+    for index, front in enumerate(fronts):
+        trace = _any_scatter(front, "Runs", REFERENCE_COLOUR, 4, three)
+        trace.showlegend = index == 0
+        trace.legendgroup = "runs"
+        figure.add_trace(trace)
+    figure.add_trace(_any_scatter(aggregate, "Union of the runs", FRONT_COLOUR, 6, three))
+    layout = {"legend": {"orientation": "h", "y": -0.15}, "margin": {"t": 20}}
+    if three:
+        layout["scene"] = {"xaxis_title": "f1", "yaxis_title": "f2", "zaxis_title": "f3"}
+        layout["height"] = 560
+    else:
+        layout["xaxis_title"], layout["yaxis_title"] = "f1", "f2"
+    figure.update_layout(**layout)
+    return figure
+
+
+def _any_scatter(points: Front, name: str, colour: str, size: int, three: bool):
+    if three:
+        return _scatter_3d(points, name, colour, max(2, size - 2))
+    return _scatter(points, (0, 1), name, colour, size)

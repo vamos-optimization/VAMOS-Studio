@@ -111,6 +111,14 @@ SECTIONS = (
                 "solutions to download, and how VAMOS ran it.",
                 available=True,
             ),
+            Page(
+                "pages/series_results.py",
+                "Independent runs",
+                "🧮",
+                "The runs of a series: their fronts and their union, and the quality indicators "
+                "of each run with their median, spread and best run.",
+                available=True,
+            ),
         ),
     ),
 )

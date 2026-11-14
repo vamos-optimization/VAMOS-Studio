@@ -7,15 +7,17 @@ from __future__ import annotations
 
 import streamlit as st
 
-from vamos_studio.backend import runs
+from vamos_studio.backend import runs, series
 from vamos_studio.backend.catalogue import problem_details, problem_entry
 
 NEW_RUN = "pages/new_run.py"
 MONITOR = "pages/monitor.py"
 HISTORY = "pages/history.py"
 RESULTS = "pages/results.py"
+SERIES_RESULTS = "pages/series_results.py"
 
 SELECTED_RUN = "selected_run"
+SELECTED_SERIES = "selected_series"
 
 
 def select_run(run: runs.SolveRun) -> None:
@@ -72,3 +74,36 @@ def variables_of(request: runs.SolveRequest) -> int:
     if request.n_var is not None:
         return request.n_var
     return problem_details(request.problem, objectives_of(request)).n_var
+
+
+def select_series(chosen: series.Series) -> None:
+    """Remember a series, so that the next page opens it."""
+    st.session_state[SELECTED_SERIES] = chosen.series_id
+
+
+def choose_series(label: str, candidates: list[series.Series]) -> series.Series | None:
+    """A selector of series, starting at the remembered one; remembers the choice."""
+    if not candidates:
+        return None
+    remembered = st.session_state.get(SELECTED_SERIES)
+    ids = [item.series_id for item in candidates]
+    index = ids.index(remembered) if remembered in ids else 0
+    chosen = candidates[
+        st.selectbox(
+            label,
+            range(len(candidates)),
+            index=index,
+            format_func=lambda i: describe_series(candidates[i]),
+        )
+    ]
+    select_series(chosen)
+    return chosen
+
+
+def describe_series(chosen: series.Series) -> str:
+    """A series in one line: its id, runs, problem, algorithm and state."""
+    request = chosen.request
+    return (
+        f"{chosen.series_id} · {chosen.count} runs of {request.algorithm} on {request.problem} · "
+        f"{series.state(chosen).value}"
+    )

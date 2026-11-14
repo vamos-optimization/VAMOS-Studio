@@ -4,10 +4,12 @@ The structure follows Transept's New run page (pages/new_run.py); the configurat
 from the algorithm's grammar (vamos_studio/configuration_form.py).
 """
 
+import os
+
 import streamlit as st
 
 from vamos_studio import ui
-from vamos_studio.backend import approximate_fronts, runs
+from vamos_studio.backend import approximate_fronts, runs, series
 from vamos_studio.backend.catalogue import (
     algorithm_entries,
     default_arguments,
@@ -25,6 +27,7 @@ from vamos_studio.problem_form import render_problem_arguments
 
 DEFAULT_EVALUATIONS = 25000
 DEFAULT_SEED = 1
+DEFAULT_PARALLEL = max(1, (os.cpu_count() or 2) // 2)
 DEFAULT_PAUSE_SECONDS = 0.2
 DEFAULT_PAUSE_EVERY = 5
 
@@ -172,6 +175,31 @@ max_evaluations = left.number_input(
     "Evaluations", min_value=100, max_value=10_000_000, value=DEFAULT_EVALUATIONS, step=1000
 )
 seed = right.number_input("Seed", min_value=0, max_value=2**31 - 1, value=DEFAULT_SEED, step=1)
+left, right = st.columns(2)
+count = int(
+    left.number_input(
+        "Independent runs",
+        min_value=1,
+        max_value=100,
+        value=1,
+        step=1,
+        help="Runs of the same configuration with consecutive seeds, from the seed above: a "
+        "series, analyzed together in Analyze › Independent runs.",
+    )
+)
+parallel = int(
+    right.number_input(
+        "Runs in parallel",
+        min_value=1,
+        max_value=max(1, os.cpu_count() or 1),
+        value=min(max(count, 1), DEFAULT_PARALLEL),
+        step=1,
+        disabled=count == 1,
+        help="How many runs of the series go on at a time.",
+    )
+)
+if count > 1:
+    st.caption(f"Seeds {int(seed)} to {int(seed) + count - 1}, {parallel} at a time.")
 
 
 def render_live_view(max_evaluations: int, values: dict) -> tuple[float, int]:
@@ -236,6 +264,9 @@ if st.button(
         reference_front=reference_choice,
         contribute=contribute,
     )
-    run = runs.launch(request, runs.runs_directory())
-    ui.select_run(run)
+    if count > 1:
+        ui.select_series(series.launch(request, count, parallel, runs.runs_directory()))
+    else:
+        ui.select_run(runs.launch(request, runs.runs_directory()))
+        st.session_state.pop(ui.SELECTED_SERIES, None)  # the Monitor then follows the run
     st.switch_page(ui.MONITOR)

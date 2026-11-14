@@ -7,22 +7,25 @@ import pandas as pd
 import streamlit as st
 
 from vamos_studio import ui
-from vamos_studio.backend import runs
+from vamos_studio.backend import runs, series
 
 CONFIRM_DELETE = "history.confirm_delete"
 CONFIRM_EMPTY = "history.confirm_empty"
+CONFIRM_DELETE_SERIES = "history.confirm_delete_series"
 
 st.title("History")
 
 
 def summary_table(candidates: list[runs.SolveRun]) -> pd.DataFrame:
     rows = []
+    series_of_runs = series.series_of_runs(runs.runs_directory())
     for run in candidates:
         request = runs.read_request(run)
         status = runs.read_status(run)
         rows.append(
             {
                 "Run": run.run_id,
+                "Series": series_of_runs.get(run.run_id, ""),
                 "State": runs.state(run).value,
                 "Problem": request.problem if request else "",
                 "Variables": ui.variables_of(request) if request else None,
@@ -82,6 +85,32 @@ def delete_actions(found: list[runs.SolveRun]) -> None:
             st.rerun()
 
 
+def delete_series_actions() -> None:
+    """Move every run of a series to the trash, after confirmation."""
+    finished = [
+        item for item in series.list_series(runs.runs_directory()) if not series.state(item).active
+    ]
+    if not finished:
+        return
+    ids = [item.series_id for item in finished]
+    chosen_id = st.selectbox("Or every run of a series", [""] + ids, format_func=lambda v: v or "—")
+    if not chosen_id:
+        return
+    chosen = finished[ids.index(chosen_id)]
+    if st.button(f"Delete the {chosen.count} runs of {chosen_id}…", key="ask_delete_series"):
+        st.session_state[CONFIRM_DELETE_SERIES] = chosen_id
+    if st.session_state.get(CONFIRM_DELETE_SERIES) == chosen_id:
+        st.warning(f"Move every run of {chosen_id} to the trash? They can be restored below.")
+        yes, no = st.columns(2)
+        if yes.button("Yes, move them to the trash", type="primary", key="confirm_series_yes"):
+            series.move_to_trash(chosen)
+            st.session_state[CONFIRM_DELETE_SERIES] = None
+            st.rerun()
+        if no.button("Cancel", key="confirm_series_no"):
+            st.session_state[CONFIRM_DELETE_SERIES] = None
+            st.rerun()
+
+
 def restore(parent, item: runs.TrashedRun) -> None:
     try:
         runs.restore(parent, item)
@@ -125,6 +154,7 @@ if found:
     open_actions(found)
     st.subheader("Delete runs")
     delete_actions(found)
+    delete_series_actions()
 else:
     st.info("There are no runs yet.")
     st.page_link(ui.NEW_RUN, label="Launch a run", icon=":material/play_arrow:")

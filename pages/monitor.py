@@ -3,10 +3,11 @@
 Adapted from Transept's Monitor page (pages/monitor.py), by the same authors.
 """
 
+import pandas as pd
 import streamlit as st
 
 from vamos_studio import charts, ui
-from vamos_studio.backend import runs
+from vamos_studio.backend import runs, series
 from vamos_studio.backend.runs import RunState
 
 REFRESH_SECONDS = 0.5
@@ -122,6 +123,100 @@ def live_run(run: runs.SolveRun) -> None:
     if not runs.state(run).active:
         st.rerun(scope="app")  # it has just ended: rerun the page, so that it stops refreshing
 
+
+def member_table(members: list[series.Member]) -> pd.DataFrame:
+    """One row per run of a series, with its progress."""
+    rows = []
+    for member in members:
+        status = runs.read_status(member.run) if member.run.directory.is_dir() else None
+        rows.append(
+            {
+                "Seed": member.seed,
+                "Run": member.run.run_id,
+                "State": member.state,
+                "Evaluations": status.evaluations if status else None,
+                "Elapsed (s)": round(status.elapsed_seconds, 1) if status else None,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def series_controls(chosen: series.Series) -> None:
+    """Stop or cancel a running series."""
+    stopping = (chosen.directory / series.STOP_FILE).is_file()
+    buttons = st.columns(2)
+    if buttons[0].button(
+        "Stop and keep the results",
+        disabled=stopping,
+        key="stop_series",
+        help="The runs in progress end at their next generation and keep their results; the "
+        "runs not started yet are not launched.",
+    ):
+        series.stop(chosen)
+        st.rerun(scope="app")
+    if buttons[1].button(
+        "Cancel the runs", key="cancel_series", help="Stops every run and keeps nothing of them."
+    ):
+        series.cancel(chosen)
+        st.rerun(scope="app")
+    if stopping:
+        st.info("Stopping: the runs in progress are saving their results.")
+
+
+def show_series(chosen: series.Series) -> None:
+    current = series.state(chosen)
+    members = series.members(chosen)
+    finished = series.finished_members(chosen)
+    request = chosen.request
+    st.subheader(f"{chosen.series_id}: {current.value}")
+    st.caption(
+        f"{chosen.count} runs of {request.algorithm} on {request.problem}, seeds "
+        f"{chosen.seeds.start} to {chosen.seeds.stop - 1}, {chosen.parallel} at a time"
+    )
+    st.progress(
+        len(finished) / chosen.count, text=f"{len(finished)} of {chosen.count} runs with results"
+    )
+    st.dataframe(member_table(members), hide_index=True, width="stretch")
+    if current.active:
+        series_controls(chosen)
+    elif finished:
+        if current == series.SeriesState.FINISHED:
+            st.success("Every run has finished.")
+        else:
+            st.warning(f"The series ended {current.value}: {len(finished)} runs have results.")
+        if st.button("Open the results of the series", type="primary", icon=":material/insights:"):
+            ui.select_series(chosen)
+            st.switch_page(ui.SERIES_RESULTS)
+    else:
+        st.warning(f"The series ended {current.value}, with no results.")
+
+
+@st.fragment(run_every=REFRESH_SECONDS)
+def live_series(chosen: series.Series) -> None:
+    show_series(chosen)
+    if not series.state(chosen).active:
+        st.rerun(scope="app")
+
+
+all_series = series.list_series(runs.runs_directory())
+following_series = False
+if all_series:
+    following_series = (
+        st.radio(
+            "Follow",
+            ["A run", "A series"],
+            index=1 if st.session_state.get(ui.SELECTED_SERIES) else 0,
+            horizontal=True,
+        )
+        == "A series"
+    )
+if following_series:
+    chosen = ui.choose_series("Series", all_series)
+    if series.state(chosen).active:
+        live_series(chosen)
+    else:
+        show_series(chosen)
+    st.stop()
 
 candidates = runs.list_runs(runs.runs_directory())
 run = ui.choose_run("Run", candidates)
