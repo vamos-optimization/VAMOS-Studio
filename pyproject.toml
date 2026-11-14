@@ -37,7 +37,7 @@ include = ["vamos_studio*"]
 
 [tool.setuptools.package-data]
 "vamos_studio.backend.upstream.spaces" = ["*.yaml"]
-"vamos_studio" = ["resources/*.txt", "resources/*.md", "resources/SHA256SUMS", "resources/referenceFronts/*.csv"]
+"vamos_studio" = ["resources/*.txt", "resources/*.md", "resources/SHA256SUMS", "resources/referenceFronts/*.csv", "resources/branding/*.png", "resources/branding/*.md"]
 
 [tool.ruff]
 target-version = "py311"

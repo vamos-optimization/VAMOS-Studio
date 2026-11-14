@@ -1,0 +1,27 @@
+# VAMOS-Studio's look: the colors of the VAMOS logo (blue to teal on navy), its typefaces
+# (Montserrat for headings, as the wordmark; IBM Plex Sans for text, as the tagline).
+
+[theme]
+base = "light"
+primaryColor = "#1F8FD6"
+backgroundColor = "#FBFCFE"
+secondaryBackgroundColor = "#EEF4FA"
+textColor = "#14173F"
+linkColor = "#1A9C93"
+borderColor = "#D6E2EE"
+showWidgetBorder = true
+baseRadius = "0.6rem"
+font = "IBM Plex Sans:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap, sans-serif"
+headingFont = "Montserrat:https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&display=swap, sans-serif"
+codeFont = "monospace"
+headingFontWeights = [800, 700, 700, 600, 600, 600]
+chartCategoricalColors = ["#2F87E0", "#1BA89A", "#14173F", "#F2A541", "#9B5DE5", "#D94A57", "#7FB8E6", "#7AD3C6"]
+blueColor = "#2F87E0"
+greenColor = "#1A9C93"
+
+[theme.sidebar]
+backgroundColor = "#F2F6FB"
+
+[client]
+# Hide the developer options (Deploy, Rerun settings) from the toolbar.
+toolbarMode = "viewer"
