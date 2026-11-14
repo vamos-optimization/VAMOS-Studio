@@ -6,7 +6,7 @@ A run is launched from New run as a user would, and then followed in the other p
 from pathlib import Path
 
 import pytest
-from conftest import make_request, wait_for_end
+from conftest import make_request, wait_for_end, wait_until
 from streamlit.testing.v1 import AppTest
 
 from vamos_studio.backend import runs
@@ -402,3 +402,33 @@ class TestApproximateFrontsInThePages:
         assert not app.exception
         assert len(shown) == 1 and "approximate front v1" in shown[0]
         assert runs.contributed(run) is None
+
+
+SERIES_RESULTS = "pages/series_results.py"
+
+
+class TestSeriesInThePages:
+    def test_should_launch_a_series_and_analyze_it(self, tmp_path, monkeypatch):
+        # Arrange
+        from vamos_studio.backend import series
+
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        app = open_page(NEW_RUN)
+        number_input(app, "Evaluations").set_value(2000).run()
+        number_input(app, "Independent runs").set_value(3).run()
+
+        # Act
+        next(b for b in app.button if b.label == "Launch the run").click().run()
+        chosen = series.list_series(tmp_path)[0]
+        wait_until(lambda: not series.state(chosen).active)
+        monitor = open_page(MONITOR)
+        history = open_page(HISTORY)
+        results = open_page(SERIES_RESULTS)
+
+        # Assert
+        assert chosen.count == 3
+        assert app.title[0].value == "Monitor"
+        assert not monitor.exception and not results.exception and not history.exception
+        assert set(history.dataframe[0].value["Series"]) == {chosen.series_id}
+        summary = results.dataframe[0].value
+        assert "median" in summary.columns and len(results.dataframe[1].value) == 3
