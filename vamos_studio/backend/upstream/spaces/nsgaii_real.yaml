@@ -1,6 +1,6 @@
 # NSGA-II for real-coded problems, as a grammar (docs/design/parameter-spaces.md).
 #
-# Built from VAMOS 1.1.0's tuning space (build_nsgaii_config_space) with these changes:
+# Built from VAMOS 1.2.1's tuning space (build_nsgaii_config_space) with these changes:
 # - M1: use_external_archive / archive_unbounded / archive_prune_policy become the categorical
 #   external_archive: none | unbounded | bounded(archive_prune_policy).
 # - M2: mutation_eta, shared by polynomial and linked_polynomial, becomes polynomial_eta and
@@ -111,7 +111,7 @@ parameters:
     global_sub_parameters:
       crossover_prob:
         type: real
-        default: 1.0
+        default: 0.9
         range: [0.6, 1.0]
         role: operator_rate
         label: Crossover probability
@@ -222,8 +222,8 @@ parameters:
         conditional_parameters:
           simplex_epsilon:
             type: real
-            default: 0.5
-            range: [0.1, 1.0]
+            default: 2.0  # VAMOS's sqrt(k + 1) for its k = 3 parents.
+            range: [1.0, 3.0]
             role: operator_rate
             label: Expansion
             description: Expansion rate of the simplex around the parents' centroid.

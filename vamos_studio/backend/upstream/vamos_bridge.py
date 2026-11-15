@@ -4,19 +4,19 @@ Upstream target: the per-algorithm builders of ``vamos.algorithms`` that turn a 
 into ``NSGAIIConfig`` and the rest (today ``config_from_assignment`` plays this role), and the
 grammars shipped as VAMOS resources. Status: local. Design: ``docs/design/parameter-spaces.md``.
 
-The grammars rename a few parameters of VAMOS 1.1's tuning spaces (changes M1, M2 and M8 of the
+The grammars rename a few parameters of VAMOS 1.2's tuning spaces (changes M1, M2 and M8 of the
 design); `to_vamos_assignment` maps them back, so VAMOS builds the configuration itself. Two
 algorithms need more than that:
 
 - MOEA/D: its mutation probability is a factor of 1/n (M8), and with three or more objectives it
   reads its weight vectors from jMetal's files shipped with VAMOS (`W<m>D_<population>.dat`), as
-  jMetal and Evolver do: the population is one with a file. VAMOS 1.1 reads those files only
-  when given their directory; without it, its default generates a Das-Dennis lattice (91 vectors
-  for three objectives, the vectors of W3D_91.dat to rounding), so a population of 100 differs
-  from jMetal's.
-- SMS-EMOA: VAMOS 1.1's tuning bridge always selects by tournament with a reference point offset
-  of 0.1, while its default selects at random with an offset of 1.0, so the studio builds
-  `SMSEMOAConfig` itself, with VAMOS's builder and VAMOS's helpers for the operators.
+  jMetal and Evolver do: the population is one with a file. VAMOS 1.1 read those files only
+  when given their directory; without it, its default generated a Das-Dennis lattice, so a
+  population of 100 differed from jMetal's. VAMOS 1.2 reads them by default; the studio still
+  names the directory, which gives the same vectors.
+- SMS-EMOA: VAMOS's tuning bridge (1.1 and 1.2) always selects by tournament with a reference
+  point offset of 0.1, while its default selects at random with an offset of 1.0, so the studio
+  builds `SMSEMOAConfig` itself, with VAMOS's builder and VAMOS's helpers for the operators.
 """
 
 from __future__ import annotations
@@ -78,7 +78,7 @@ def builtin_space(algorithm: str, encoding: str) -> ParameterSpace | None:
 
 
 def to_vamos_assignment(configuration: Configuration) -> dict[str, Any]:
-    """The configuration in the vocabulary of VAMOS 1.1's tuning spaces.
+    """The configuration in the vocabulary of VAMOS 1.2's tuning spaces.
 
     Args:
         configuration: A configuration of a built-in grammar.

@@ -14,6 +14,9 @@ class TestAlgorithms:
         # Assert
         assert keys == {
             "agemoea",
+            "ccmo",
+            "cmoeams",
+            "ctaea",
             "ibea",
             "moead",
             "nsgaii",
@@ -22,6 +25,7 @@ class TestAlgorithms:
             "smpso",
             "smsemoa",
             "spea2",
+            "top",
         }
 
     def test_should_make_nsgaii_moead_and_smsemoa_available_for_real_and_binary_problems(self):

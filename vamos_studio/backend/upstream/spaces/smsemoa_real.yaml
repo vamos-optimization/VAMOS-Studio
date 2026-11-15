@@ -1,6 +1,6 @@
 # SMS-EMOA for real-coded problems, as a grammar (docs/design/parameter-spaces.md).
 #
-# Built from VAMOS 1.1.0's tuning space (build_smsemoa_config_space) with these changes:
+# Built from VAMOS 1.2.1's tuning space (build_smsemoa_config_space) with these changes:
 # - M1: use_external_archive / archive_unbounded / archive_prune_policy become the categorical
 #   external_archive: none | unbounded | bounded(archive_prune_policy).
 # - M2: mutation_eta, shared by polynomial (pm in VAMOS's space) and linked_polynomial, becomes
@@ -109,7 +109,7 @@ parameters:
     global_sub_parameters:
       crossover_prob:
         type: real
-        default: 1.0
+        default: 0.9
         range: [0.6, 1.0]
         role: operator_rate
         label: Crossover probability
@@ -141,47 +141,6 @@ parameters:
             label: BLX repair
             description: How BLX-alpha offspring outside the bounds are brought back.
       arithmetic: {}
-      pcx:
-        conditional_parameters:
-          pcx_sigma_eta:
-            type: real
-            default: 0.1
-            range: [0.01, 0.5]
-            role: operator_rate
-            label: Sigma eta
-            description: Spread along the direction from the centroid to the parent.
-          pcx_sigma_zeta:
-            type: real
-            default: 0.1
-            range: [0.01, 0.5]
-            role: operator_rate
-            label: Sigma zeta
-            description: Spread across the other directions.
-      undx:
-        conditional_parameters:
-          undx_zeta:
-            type: real
-            default: 0.5
-            range: [0.1, 1.0]
-            role: operator_rate
-            label: Zeta
-            description: Spread along the line between the first two parents.
-          undx_eta:
-            type: real
-            default: 0.35
-            range: [0.1, 1.0]
-            role: operator_rate
-            label: Eta
-            description: Spread orthogonal to that line.
-      simplex:
-        conditional_parameters:
-          simplex_epsilon:
-            type: real
-            default: 0.5
-            range: [0.1, 1.0]
-            role: operator_rate
-            label: Expansion
-            description: Expansion rate of the simplex around the parents' centroid.
   mutation:
     type: categorical
     default: polynomial

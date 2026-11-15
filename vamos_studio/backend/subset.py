@@ -1,8 +1,9 @@
 """Choosing the result of a run from an unbounded archive: a diverse subset of it.
 
 An unbounded external archive keeps every non-dominated solution found, thousands of them, and
-VAMOS 1.1 returns them all. As jMetal does (its BestSolutionsArchive), the studio returns a
-subset as large as the population, chosen by the configuration's `archive_subset_selection`.
+VAMOS (1.1 and 1.2) returns them all. As jMetal does (its BestSolutionsArchive), the studio
+returns a subset as large as the population, chosen by the configuration's
+`archive_subset_selection`.
 The selection itself is VAMOS's (vamos.engine.algorithm.components.subset_selection).
 
 `farthest` is VAMOS's farthest-point (max-min distance) selection on objectives normalized with
@@ -41,7 +42,8 @@ METHODS: Final[dict[str, Selector]] = {
     "farthest": lambda front, k: select_top_k_farthest(_normalized(front), k),
     "crowding": select_top_k_crowding,
     "hv_greedy": select_top_k_hv_greedy,
-    "kmeans": select_top_k_kmeans,
+    # VAMOS 1.2 needs an explicit generator; a fixed seed gives each front one subset.
+    "kmeans": lambda front, k: select_top_k_kmeans(front, k, rng=np.random.default_rng(0)),
 }
 
 

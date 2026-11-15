@@ -35,6 +35,9 @@ ENCODING_LABELS: Final = {
 }
 ALGORITHM_LABELS: Final = {
     "agemoea": "AGE-MOEA",
+    "ccmo": "CCMO",
+    "cmoeams": "CMOEA-MS",
+    "ctaea": "C-TAEA",
     "ibea": "IBEA",
     "moead": "MOEA/D",
     "nsgaii": "NSGA-II",
@@ -43,6 +46,7 @@ ALGORITHM_LABELS: Final = {
     "smpso": "SMPSO",
     "smsemoa": "SMS-EMOA",
     "spea2": "SPEA2",
+    "top": "ToP",
 }
 # Problem families the studio supports, and the encodings it supports them for.
 SUPPORTED_PROBLEM_FAMILIES: Final = {
