@@ -163,6 +163,26 @@ def series_controls(chosen: series.Series) -> None:
         st.info("Stopping: the runs in progress are saving their results.")
 
 
+def show_series_fronts(chosen: series.Series, members: list[series.Member]) -> None:
+    """The current front of each run in progress, over the fronts of the finished runs."""
+    in_progress = (RunState.STARTING.value, RunState.RUNNING.value)
+    active = [runs.live_front(m.run) for m in members if m.state in in_progress]
+    active = [front for front in active if front is not None]
+    finished = [front for _, front in series.member_fronts(chosen)]
+    if not active and not finished:
+        st.caption("The fronts appear here as soon as the first runs report them.")
+        return
+    started = [m.run for m in members if (m.run.directory / runs.REQUEST_FILE).is_file()]
+    reference, _ = runs.reference_front_of(started[0])
+    if reference is not None and len(reference) > MAX_REFERENCE_POINTS:
+        reference = reference[:: -(-len(reference) // MAX_REFERENCE_POINTS)]
+    st.plotly_chart(charts.series_live_figure(active, finished, reference), width="stretch")
+    st.caption(
+        "In blue, the current fronts of the runs in progress; in grey, the results of the runs "
+        "already finished; over the reference front."
+    )
+
+
 def show_series(chosen: series.Series) -> None:
     current = series.state(chosen)
     members = series.members(chosen)
@@ -176,6 +196,7 @@ def show_series(chosen: series.Series) -> None:
     st.progress(
         len(finished) / chosen.count, text=f"{len(finished)} of {chosen.count} runs with results"
     )
+    show_series_fronts(chosen, members)
     st.dataframe(member_table(members), hide_index=True, width="stretch")
     if current.active:
         series_controls(chosen)

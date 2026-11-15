@@ -182,6 +182,38 @@ def series_figure(
     return figure
 
 
+def series_live_figure(
+    active: list[Front], finished: list[Front], reference_front: Front | None = None
+) -> go.Figure:
+    """The current fronts of a series' runs in progress in blue, over the finished ones in grey.
+
+    As Transept follows a series (transept/charts.py, series_progress_figure), with fronts.
+    """
+    drawn = [*active, *finished]
+    three = n_objectives(drawn[0] if drawn else None, reference_front) == 3
+    figure = go.Figure()
+    if reference_front is not None:
+        figure.add_trace(_any_scatter(reference_front, "Reference front", "#e3e6ea", 2, three))
+    groups = (
+        (finished, "Finished runs", REFERENCE_COLOUR, 4),
+        (active, "Runs in progress", FRONT_COLOUR, 6),  # last, so that they are on top
+    )
+    for fronts, name, colour, size in groups:
+        for index, front in enumerate(fronts):
+            trace = _any_scatter(front, name, colour, size, three)
+            trace.showlegend = index == 0
+            trace.legendgroup = name
+            figure.add_trace(trace)
+    layout = {"legend": {"orientation": "h", "y": -0.15}, "margin": {"t": 20}}
+    if three:
+        layout["scene"] = {"xaxis_title": "f1", "yaxis_title": "f2", "zaxis_title": "f3"}
+        layout["height"] = 560
+    else:
+        layout["xaxis_title"], layout["yaxis_title"] = "f1", "f2"
+    figure.update_layout(**layout)
+    return figure
+
+
 def _any_scatter(points: Front, name: str, colour: str, size: int, three: bool):
     if three:
         return _scatter_3d(points, name, colour, max(2, size - 2))
