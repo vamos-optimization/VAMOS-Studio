@@ -1,5 +1,5 @@
-"""Home: a panel of the studio, with the VAMOS logo, a first run in one click, recent activity,
-news and the way to every page.
+"""Home: a panel of the studio, with the VAMOS logo, a first run in one click, the front of the
+latest run, recent activity, news and the way to every page.
 
 What it shows besides the links comes from vamos_studio/home_panel.py.
 """
@@ -10,7 +10,7 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
-from vamos_studio import ui
+from vamos_studio import charts, ui
 from vamos_studio.backend import runs, vamos_version
 from vamos_studio.backend.catalogue import (
     algorithm_entries,
@@ -19,6 +19,7 @@ from vamos_studio.backend.catalogue import (
     problem_entry,
     reference_front,
 )
+from vamos_studio.backend.indicators import compute_all
 from vamos_studio.branding import LOGO
 from vamos_studio.home_panel import (
     Activity,
@@ -33,7 +34,12 @@ VAMOS_URL = "https://github.com/vamos-optimization/VAMOS"
 CHANGELOG = Path(__file__).resolve().parent.parent / "CHANGELOG.md"
 HERO_FRONT = ("dtlz2", 3)
 GRADIENT = [[0.0, "#2F87E0"], [1.0, "#1BA89A"]]
-CARDS_PER_ROW = 3
+CARDS_PER_ROW = 2
+RECENT_RUNS = 4
+HERO_HEIGHT = 330
+HERO_REFRESH_SECONDS = 1.0
+# The reference front is drawn with at most this many points, as in the Monitor.
+MAX_REFERENCE_POINTS = 2000
 STATE_BADGES = {
     runs.RunState.STARTING: ("Starting", ":material/hourglass_top:", "blue"),
     runs.RunState.RUNNING: ("Running", ":material/sync:", "blue"),
@@ -46,7 +52,7 @@ STATE_BADGES = {
 
 
 def hero_figure() -> go.Figure | None:
-    """The reference front of DTLZ2 with three objectives, in the logo's colors."""
+    """The reference front of DTLZ2 with three objectives, in the logo's colors: before any run."""
     front = reference_front(*HERO_FRONT)
     if front is None:
         return None
@@ -63,7 +69,7 @@ def hero_figure() -> go.Figure | None:
     )
     axis = {"showbackground": False, "showticklabels": False, "title": "", "gridcolor": "#D6E2EE"}
     figure.update_layout(
-        height=330,
+        height=HERO_HEIGHT,
         margin={"l": 0, "r": 0, "t": 0, "b": 0},
         paper_bgcolor="rgba(0,0,0,0)",
         scene={
@@ -77,6 +83,78 @@ def hero_figure() -> go.Figure | None:
     return figure
 
 
+def run_figure(front, run: runs.SolveRun) -> go.Figure:
+    """A run's front over its reference front, sized for the home page."""
+    reference, _ = runs.reference_front_of(run)
+    if reference is not None and len(reference) > MAX_REFERENCE_POINTS:
+        reference = reference[:: -(-len(reference) // MAX_REFERENCE_POINTS)]
+    figure = charts.front_figure(front, reference)
+    figure.update_layout(height=HERO_HEIGHT, margin={"l": 0, "r": 0, "t": 10, "b": 0})
+    return figure
+
+
+def describe_run(run: runs.SolveRun) -> str:
+    request = runs.read_request(run)
+    if request is None:
+        return run.run_id
+    return f"{algorithm_label(request.algorithm)} on {_problem_label(request.problem)}"
+
+
+@st.cache_data(show_spinner=False, max_entries=16)
+def result_quality(run_directory: str) -> str:
+    """HV and IGD+ of a run's result against its reference front, or "" without one."""
+    run = runs.SolveRun(Path(run_directory))
+    reference, _ = runs.reference_front_of(run)
+    if reference is None:
+        return ""
+    values = compute_all(runs.result_front(run)[0], reference)
+    return f" · HV {values['hv']:.4f} · IGD+ {values['igd_plus']:.4g}"
+
+
+@st.fragment(run_every=HERO_REFRESH_SECONDS)
+def render_live_run(run: runs.SolveRun) -> None:
+    """The front of the run in progress, as the Monitor draws it."""
+    if not runs.state(run).active:
+        st.rerun(scope="app")  # it has just ended: show its result instead
+    status = runs.read_status(run)
+    st.plotly_chart(
+        run_figure(runs.live_front(run), run), config={"displayModeBar": False}, width="stretch"
+    )
+    progress = (
+        f", {status.evaluations:,} of {status.max_evaluations:,} evaluations"
+        if status is not None and status.max_evaluations
+        else ""
+    )
+    st.caption(f"In progress: {describe_run(run)}{progress}.")
+    if st.button("Follow it in the Monitor", icon=":material/monitor_heart:"):
+        ui.open_run(run)
+        st.switch_page(ui.MONITOR)
+
+
+def render_latest_result(run: runs.SolveRun) -> None:
+    """The result of the newest run with one, over its reference front."""
+    front = runs.result_front(run)[0]
+    st.plotly_chart(run_figure(front, run), config={"displayModeBar": False}, width="stretch")
+    st.caption(f"Latest result: {describe_run(run)}{result_quality(str(run.directory))}.")
+    if st.button("Open it in Results", icon=":material/insights:"):
+        ui.open_run(run)
+        st.switch_page(ui.RESULTS)
+
+
+def render_picture(summary: Activity) -> None:
+    """The latest run's front, live while it runs; DTLZ2's front before any run."""
+    if summary.active is not None:
+        render_live_run(summary.active)
+        return
+    if summary.latest_result is not None:
+        render_latest_result(summary.latest_result)
+        return
+    figure = hero_figure()
+    if figure is not None:
+        st.plotly_chart(figure, config={"displayModeBar": False}, width="stretch")
+        st.caption("The Pareto front of DTLZ2 with three objectives.")
+
+
 def launch_quick_start() -> None:
     """Launch NSGA-II on ZDT1 with its defaults, and follow it in the Monitor."""
     ui.select_run(runs.launch(quick_start_request(), runs.runs_directory()))
@@ -84,7 +162,7 @@ def launch_quick_start() -> None:
     st.switch_page(ui.MONITOR)
 
 
-def render_hero(installed: str | None) -> None:
+def render_hero(installed: str | None, summary: Activity) -> None:
     text, picture = st.columns([5, 4], vertical_alignment="center")
     with text:
         st.image(LOGO, width=400)
@@ -117,10 +195,7 @@ def render_hero(installed: str | None) -> None:
             width="stretch",
         )
     with picture:
-        figure = hero_figure()
-        if figure is not None:
-            st.plotly_chart(figure, config={"displayModeBar": False}, width="stretch")
-            st.caption("The Pareto front of DTLZ2 with three objectives.")
+        render_picture(summary)
 
 
 def render_metrics(summary: Activity) -> None:
@@ -140,64 +215,39 @@ def render_metrics(summary: Activity) -> None:
             st.metric(label, value)
 
 
-def render_active(run: runs.SolveRun) -> None:
-    request = runs.read_request(run)
-    status = runs.read_status(run)
-    with st.container(border=True):
-        st.markdown("**:material/sync: In progress**")
-        if request is not None:
-            algorithm = algorithm_label(request.algorithm)
-            st.markdown(f"{algorithm} on {_problem_label(request.problem)}")
-        if status is not None and status.max_evaluations:
-            st.progress(
-                min(1.0, status.evaluations / status.max_evaluations),
-                text=f"{status.evaluations:,} of {status.max_evaluations:,} evaluations",
-            )
-        if st.button("Follow it in the Monitor", icon=":material/monitor_heart:"):
-            ui.select_run(run)
-            st.switch_page(ui.MONITOR)
-
-
 def render_recent(summary: Activity) -> None:
+    """The newest runs, one line each, with a button to open each one."""
     st.subheader("Recent runs")
-    if summary.active is not None:
-        render_active(summary.active)
-    if not summary.recent:
-        with st.container(border=True):
+    with st.container(border=True):
+        if not summary.recent:
             st.markdown(
                 ":material/lightbulb: No runs yet. **Try NSGA-II on ZDT1** above for a first run, "
                 "or open **New run** to choose a problem and an algorithm."
             )
-        return
-    for recent in summary.recent:
-        if summary.active is None or recent.run != summary.active:
+            return
+        for recent in summary.recent:
             render_recent_run(recent)
-    st.page_link(ui.HISTORY, label="All runs", icon=":material/history:")
+        st.page_link(ui.HISTORY, label="All runs", icon=":material/history:")
 
 
 def render_recent_run(recent: RecentRun) -> None:
-    label, icon, color = STATE_BADGES[recent.state]
-    with st.container(border=True):
-        what, when, action = st.columns([4, 4, 2], vertical_alignment="center")
-        with what:
-            st.markdown(
-                f"**{algorithm_label(recent.algorithm)}** on {_problem_label(recent.problem)}"
-            )
-            st.badge(label, icon=icon, color=color)
-        when.caption(
-            (recent.launched.strftime("%d %b %Y, %H:%M") if recent.launched else recent.run.run_id)
-            + f" · {recent.evaluations:,} evaluations"
-            + (" · in a series" if recent.in_series else "")
-        )
-        target = ui.RESULTS if recent.state.has_results else ui.MONITOR
-        if action.button(
-            "Results" if recent.state.has_results else "Monitor",
-            key=f"home.open.{recent.run.run_id}",
-            icon=":material/insights:" if recent.state.has_results else ":material/monitor_heart:",
-            width="stretch",
-        ):
-            ui.select_run(recent.run)
-            st.switch_page(target)
+    label, icon, _ = STATE_BADGES[recent.state]
+    when = recent.launched.strftime("%d %b, %H:%M") if recent.launched else recent.run.run_id
+    what, action = st.columns([6, 1], vertical_alignment="center")
+    what.markdown(
+        f"{icon} **{algorithm_label(recent.algorithm)}** on {_problem_label(recent.problem)}  \n"
+        f":gray[{label} · {when}" + (" · in a series" if recent.in_series else "") + "]"
+    )
+    has_results = recent.state.has_results
+    if action.button(
+        "",
+        key=f"home.open.{recent.run.run_id}",
+        icon=":material/insights:" if has_results else ":material/monitor_heart:",
+        help="Open in Results" if has_results else "Open in the Monitor",
+        type="tertiary",
+    ):
+        ui.open_run(recent.run)
+        st.switch_page(ui.RESULTS if has_results else ui.MONITOR)
 
 
 def render_getting_started() -> None:
@@ -254,14 +304,13 @@ def _problem_label(key: str) -> str:
         return key
 
 
-render_hero(vamos_version())
-summary = activity(runs.runs_directory())
+summary = activity(runs.runs_directory(), limit=RECENT_RUNS)
+render_hero(vamos_version(), summary)
 render_metrics(summary)
-recent, side = st.columns([3, 2], gap="large")
-with recent:
-    render_recent(summary)
+pages, side = st.columns([3, 2], gap="large")
+with pages:
+    render_pages()
 with side:
     render_getting_started()
     render_news()
-st.divider()
-render_pages()
+    render_recent(summary)

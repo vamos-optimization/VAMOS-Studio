@@ -60,6 +60,7 @@ class Activity:
         by_state: How many runs are in each state.
         series_count: How many series there are.
         active: The newest run still starting or running, if any.
+        latest_result: The newest run with results, if any.
     """
 
     recent: tuple[RecentRun, ...]
@@ -67,6 +68,7 @@ class Activity:
     by_state: dict[runs.RunState, int]
     series_count: int
     active: runs.SolveRun | None
+    latest_result: runs.SolveRun | None = None
 
     @property
     def finished(self) -> int:
@@ -102,12 +104,14 @@ def activity(parent: Path, limit: int = 6) -> Activity:
             )
         )
     active = next((run for run in all_runs if states[run.run_id].active), None)
+    latest_result = next((run for run in all_runs if states[run.run_id].has_results), None)
     return Activity(
         recent=tuple(recent),
         total=len(all_runs),
         by_state=dict(Counter(states.values())),
         series_count=len(series.list_series(parent)),
         active=active,
+        latest_result=latest_result,
     )
 
 
