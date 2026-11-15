@@ -15,9 +15,11 @@ Works with VAMOS 1.2 (1.2.1 or later).
 - **The VAMOS logo and colors**: the logo heads the menu and the home page, its V is the tab's
   icon, and the theme takes its colors (blue to teal on navy) and typefaces (Montserrat and IBM
   Plex Sans).
-- **Home** as a panel of the studio: DTLZ2's front, a first run in one click (NSGA-II on ZDT1,
-  followed in the Monitor), counts of runs and series, the run in progress and the latest runs
-  with their state, first steps, the news of this changelog, and a card for each page.
+- **Home** as a panel of the studio: the front of the latest run (live while it runs, with a link to
+  the Monitor; once finished, over its reference front with its HV and IGD+ and a link to Results;
+  DTLZ2's front before any run), a first run in one click (NSGA-II on ZDT1, followed in the
+  Monitor), counts of runs and series, a card for each page next to first steps, the news of this
+  changelog and the four latest runs, one line each with their state.
 - **Explore › Algorithms** (prototype): the parameter space of NSGA-II for real-coded problems
   as a grammar, shown as a tree, as a table of parameters with when each one is active, as its
   default configuration (a command line that runs exactly as VAMOS's default NSGA-II) and as
@@ -53,13 +55,15 @@ Works with VAMOS 1.2 (1.2.1 or later).
   with jMetal's file); VAMOS has no binary defaults for them, so theirs are NSGA-II's binary ones.
   NSGA-II stays the default algorithm. At the end of any run, the Monitor shows its result.
 - **Series of independent runs**, as in Transept: New run launches several runs of the same
-  configuration with consecutive seeds, a chosen number at a time, through a background process
-  that survives the browser. A series measured against an approximate front copies it once, so all
-  its runs use the same version. The Monitor follows a series (its runs, their progress, stop or
-  cancel), History shows which series each run belongs to and deletes whole series, and the new
-  **Analyze › Independent runs** page shows the fronts of its runs and their union, and each run's
-  quality indicators with their median, interquartile range, mean, standard deviation, minimum and
-  maximum, to download, with the best run by any indicator.
+  configuration with consecutive seeds, a chosen number at a time, through a background process that
+  survives the browser. A series measured against an approximate front copies it once, so all its
+  runs use the same version. The Monitor follows a series (its runs, their progress, the current
+  fronts of the runs in progress in blue over those finished in grey, stop or cancel), History shows
+  which series each run belongs to and deletes whole series, and **Results** lists a series as one
+  entry, as Transept does: it shows either the aggregate (the fronts of its runs and their union,
+  and each run's quality indicators with their median, interquartile range, mean, standard
+  deviation, minimum and maximum, to download, with the best run by any indicator) or any of its
+  runs.
 - **Approximate reference fronts**, for problems without a known front (the binary knapsack,
   QUBO and feature selection) or with arguments that change it, and for any other at the user's
   choice. A run can add its non-dominated solutions (its whole archive) to the approximate front
