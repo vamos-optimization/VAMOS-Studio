@@ -107,6 +107,30 @@ class TestFrontFigure:
         assert [trace.name for trace in figure.data] == ["Reference front"]
 
 
+class TestSeriesLiveFigure:
+    def test_should_draw_the_runs_in_progress_over_the_finished_ones(self):
+        # Act
+        figure = charts.series_live_figure(
+            [np.ones((3, 2))], [np.zeros((3, 2)), np.zeros((4, 2))], np.zeros((5, 2))
+        )
+
+        # Assert
+        assert [trace.name for trace in figure.data] == [
+            "Reference front",
+            "Finished runs",
+            "Finished runs",
+            "Runs in progress",
+        ]
+        assert [trace.showlegend for trace in figure.data[1:]] == [True, False, True]
+
+    def test_should_draw_three_objectives_in_3d(self):
+        # Act
+        figure = charts.series_live_figure([np.ones((3, 3))], [])
+
+        # Assert
+        assert [trace.type for trace in figure.data] == ["scatter3d"]
+
+
 class TestFrontFigure3D:
     FRONT = np.array([[0.0, 0.5, 0.5], [0.5, 0.0, 0.5], [0.5, 0.5, 0.0]])
 

@@ -483,3 +483,20 @@ class TestSeriesInThePages:
         # Assert
         assert not results.exception
         assert results.selectbox(key="show:" + chosen.series_id).value.startswith("Run with seed")
+
+    def test_should_draw_the_fronts_of_a_series_in_the_monitor(self, launched_series, monkeypatch):
+        # Arrange
+        from vamos_studio import ui
+
+        parent, _, chosen = launched_series
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(parent))
+        app = AppTest.from_file(APP, default_timeout=60).run()
+        app.session_state[ui.SELECTED_SERIES] = chosen.series_id
+
+        # Act
+        monitor = app.switch_page(MONITOR).run()
+
+        # Assert
+        assert not monitor.exception
+        figure = monitor.get("plotly_chart")[0].proto.spec
+        assert '"Finished runs"' in figure
