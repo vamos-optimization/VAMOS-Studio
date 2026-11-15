@@ -500,3 +500,30 @@ class TestSeriesInThePages:
         assert not monitor.exception
         figure = monitor.get("plotly_chart")[0].proto.spec
         assert '"Finished runs"' in figure
+
+
+class TestHomeShowsTheLatestRun:
+    def test_should_draw_the_latest_result_with_its_quality(self, launched):
+        # Act
+        home = AppTest.from_file(APP, default_timeout=60).run()
+
+        # Assert
+        assert not home.exception
+        shown = [caption.value for caption in home.caption]
+        assert any(text.startswith("Latest result: NSGA-II on ZDT1 · HV") for text in shown)
+        assert "Open it in Results" in [button.label for button in home.button]
+
+    def test_should_draw_the_run_in_progress(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        run = runs.launch(make_request("zdt1", 5_000_000), tmp_path)
+        wait_until(lambda: runs.state(run) == RunState.RUNNING)
+
+        # Act
+        home = AppTest.from_file(APP, default_timeout=60).run()
+
+        runs.cancel(run)
+
+        # Assert
+        assert not home.exception
+        assert any(c.value.startswith("In progress: NSGA-II on ZDT1") for c in home.caption)

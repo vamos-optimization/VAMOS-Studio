@@ -81,6 +81,18 @@ class TestActivity:
         assert (summary.total, summary.finished, summary.series_count) == (0, 0, 0)
         assert summary.recent == () and summary.active is None
 
+    def test_should_find_the_newest_run_with_results(self, tmp_path):
+        # Arrange
+        _write_run(tmp_path, "20261114-100000", "finished")
+        _write_run(tmp_path, "20261114-110000", "stopped")
+        _write_run(tmp_path, "20261114-120000", "failed")
+
+        # Act
+        summary = activity(tmp_path)
+
+        # Assert
+        assert summary.latest_result.run_id == "20261114-110000"
+
     def test_should_count_the_runs_by_state_and_list_the_newest_first(self, tmp_path):
         # Arrange
         _write_run(tmp_path, "20261114-100000", "finished")
