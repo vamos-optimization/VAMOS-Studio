@@ -120,7 +120,7 @@ def render_hero(installed: str | None) -> None:
         figure = hero_figure()
         if figure is not None:
             st.plotly_chart(figure, config={"displayModeBar": False}, width="stretch")
-            st.caption("The Pareto front of DTLZ2 with three objectives (jMetal's reference).")
+            st.caption("The Pareto front of DTLZ2 with three objectives.")
 
 
 def render_metrics(summary: Activity) -> None:
