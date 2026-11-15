@@ -163,3 +163,20 @@ class TestSummary:
         # Assert
         assert isinstance(self.TABLE, pd.DataFrame)
         assert self.TABLE.columns.tolist() == ["Seed", "Run", "hv", "igd"]
+
+
+class TestRunsAndSeries:
+    def test_should_list_a_series_once_in_the_place_of_its_first_run(self, tmp_path):
+        # Arrange
+        from vamos_studio import ui
+
+        chosen = series.Series(tmp_path / "series" / "s1", make_request(), 3, 1)
+        single = runs.SolveRun(tmp_path / "single")
+        other = series.Series(tmp_path / "series" / "s2", make_request(), 2, 1)
+        candidates = [single, chosen.run(3), chosen.run(1), runs.SolveRun(tmp_path / "older")]
+
+        # Act
+        entries = ui.runs_and_series(candidates, [chosen, other])
+
+        # Assert
+        assert entries == [single, chosen, runs.SolveRun(tmp_path / "older")]

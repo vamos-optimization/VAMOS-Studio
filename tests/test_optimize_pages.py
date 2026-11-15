@@ -440,3 +440,46 @@ class TestSeriesInThePages:
         assert results.selectbox(key="show:" + chosen.series_id).value == "All runs (aggregate)"
         summary = results.dataframe[0].value
         assert "median" in summary.columns and len(results.dataframe[1].value) == 3
+
+    def test_should_show_a_run_of_the_series(self, launched_series, monkeypatch):
+        # Arrange
+        parent, _, chosen = launched_series
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(parent))
+        results = open_page(RESULTS)
+
+        # Act
+        results.selectbox(key="show:" + chosen.series_id).set_value("Run with seed 2").run()
+
+        # Assert
+        assert not results.exception
+        tabs = [tab.label for tab in results.tabs]
+        assert tabs == ["Front", "Indicators", "Solutions", "Details"]
+
+    def test_should_open_the_run_remembered_by_another_page(self, launched_series, monkeypatch):
+        # Arrange
+        from vamos_studio import ui
+
+        parent, _, chosen = launched_series
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(parent))
+        app = AppTest.from_file(APP, default_timeout=60).run()
+        app.session_state[ui.SELECTED_RUN] = chosen.run_id(3)
+
+        # Act
+        results = app.switch_page(RESULTS).run()
+
+        # Assert
+        assert not results.exception
+        assert results.selectbox(key="show:" + chosen.series_id).value == "Run with seed 3"
+
+    def test_should_open_the_best_run_from_the_aggregate(self, launched_series, monkeypatch):
+        # Arrange
+        parent, _, chosen = launched_series
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(parent))
+        results = open_page(RESULTS)
+
+        # Act
+        next(b for b in results.button if b.label.startswith("Open the best run")).click().run()
+
+        # Assert
+        assert not results.exception
+        assert results.selectbox(key="show:" + chosen.series_id).value.startswith("Run with seed")
