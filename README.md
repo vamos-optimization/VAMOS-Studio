@@ -57,6 +57,4 @@ and [GIT_GUIDELINES.md](GIT_GUIDELINES.md).
 
 ## License
 
-VAMOS-Studio is distributed under the [MIT license](LICENSE). The reference fronts in
-`vamos_studio/resources/` are copied from jMetal, also under the MIT license
-([LICENSE-jMetal.txt](vamos_studio/resources/LICENSE-jMetal.txt)).
+VAMOS-Studio is distributed under the [MIT license](LICENSE).
