@@ -14,7 +14,6 @@ NEW_RUN = "pages/new_run.py"
 MONITOR = "pages/monitor.py"
 HISTORY = "pages/history.py"
 RESULTS = "pages/results.py"
-SERIES_RESULTS = "pages/series_results.py"
 
 SELECTED_RUN = "selected_run"
 SELECTED_SERIES = "selected_series"
@@ -23,6 +22,12 @@ SELECTED_SERIES = "selected_series"
 def select_run(run: runs.SolveRun) -> None:
     """Remember a run, so that the next page opens it."""
     st.session_state[SELECTED_RUN] = run.run_id
+
+
+def open_run(run: runs.SolveRun) -> None:
+    """Remember a run to open by itself: the next page forgets the remembered series."""
+    select_run(run)
+    st.session_state.pop(SELECTED_SERIES, None)
 
 
 def selected_run() -> runs.SolveRun | None:
@@ -107,3 +112,64 @@ def describe_series(chosen: series.Series) -> str:
         f"{chosen.series_id} · {chosen.count} runs of {request.algorithm} on {request.problem} · "
         f"{series.state(chosen).value}"
     )
+
+
+def runs_and_series(
+    candidates: list[runs.SolveRun], all_series: list[series.Series]
+) -> list[runs.SolveRun | series.Series]:
+    """One entry per run that is not in a series, and one per series, in the order of `candidates`.
+
+    A series takes the place of its first run among `candidates`; a series with none of its runs
+    among them is left out.
+    """
+    owner = {item.run_id(seed): item for item in all_series for seed in item.seeds}
+    entries: list[runs.SolveRun | series.Series] = []
+    added: set[str] = set()
+    for run in candidates:
+        item = owner.get(run.run_id)
+        if item is None:
+            entries.append(run)
+        elif item.series_id not in added:
+            added.add(item.series_id)
+            entries.append(item)
+    return entries
+
+
+def choose_run_or_series(
+    label: str, candidates: list[runs.SolveRun], all_series: list[series.Series]
+) -> runs.SolveRun | series.Series | None:
+    """A selector with one entry per single run or series (see `runs_and_series`).
+
+    It starts at the remembered series, or else at the remembered run or its series, and
+    remembers the choice.
+    """
+    entries = runs_and_series(candidates, all_series)
+    if not entries:
+        return None
+    owner = {item.run_id(seed): item.series_id for item in all_series for seed in item.seeds}
+    wanted = st.session_state.get(SELECTED_SERIES)
+    remembered = selected_run()
+    if not wanted and remembered is not None:
+        wanted = owner.get(remembered.run_id, remembered.run_id)
+    keys = [_key(entry) for entry in entries]
+    chosen = entries[
+        st.selectbox(
+            label,
+            range(len(entries)),
+            index=keys.index(wanted) if wanted in keys else 0,
+            format_func=lambda i: _describe_entry(entries[i]),
+        )
+    ]
+    if isinstance(chosen, series.Series):
+        select_series(chosen)
+    else:
+        open_run(chosen)
+    return chosen
+
+
+def _key(entry: runs.SolveRun | series.Series) -> str:
+    return entry.series_id if isinstance(entry, series.Series) else entry.run_id
+
+
+def _describe_entry(entry: runs.SolveRun | series.Series) -> str:
+    return describe_series(entry) if isinstance(entry, series.Series) else describe(entry)

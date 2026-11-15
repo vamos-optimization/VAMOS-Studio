@@ -108,15 +108,8 @@ SECTIONS = (
                 "Results",
                 ":material/insights:",
                 "The front a run found, with its knee and extremes, its quality indicators, its "
-                "solutions to download, and how VAMOS ran it.",
-                available=True,
-            ),
-            Page(
-                "pages/series_results.py",
-                "Independent runs",
-                ":material/stacked_line_chart:",
-                "The runs of a series: their fronts and their union, and the quality indicators "
-                "of each run with their median, spread and best run.",
+                "solutions to download, and how VAMOS ran it; for a series of independent runs, "
+                "their fronts and union and their indicators with median, spread and best run.",
                 available=True,
             ),
         ),

@@ -404,31 +404,39 @@ class TestApproximateFrontsInThePages:
         assert runs.contributed(run) is None
 
 
-SERIES_RESULTS = "pages/series_results.py"
+@pytest.fixture(scope="module")
+def launched_series(tmp_path_factory):
+    """A series of three runs launched from New run, finished."""
+    from vamos_studio.backend import series
 
-
-class TestSeriesInThePages:
-    def test_should_launch_a_series_and_analyze_it(self, tmp_path, monkeypatch):
-        # Arrange
-        from vamos_studio.backend import series
-
-        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+    parent = tmp_path_factory.mktemp("series")
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setenv(runs.RUNS_DIRECTORY_ENV, str(parent))
         app = open_page(NEW_RUN)
         number_input(app, "Evaluations").set_value(2000).run()
         number_input(app, "Independent runs").set_value(3).run()
+        next(b for b in app.button if b.label == "Launch the run").click().run()
+        chosen = series.list_series(parent)[0]
+        wait_until(lambda: not series.state(chosen).active)
+    return parent, app, chosen
+
+
+class TestSeriesInThePages:
+    def test_should_launch_a_series_and_analyze_it_in_results(self, launched_series, monkeypatch):
+        # Arrange
+        parent, app, chosen = launched_series
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(parent))
 
         # Act
-        next(b for b in app.button if b.label == "Launch the run").click().run()
-        chosen = series.list_series(tmp_path)[0]
-        wait_until(lambda: not series.state(chosen).active)
         monitor = open_page(MONITOR)
         history = open_page(HISTORY)
-        results = open_page(SERIES_RESULTS)
+        results = open_page(RESULTS)
 
         # Assert
         assert chosen.count == 3
         assert app.title[0].value == "Monitor"
         assert not monitor.exception and not results.exception and not history.exception
         assert set(history.dataframe[0].value["Series"]) == {chosen.series_id}
+        assert results.selectbox(key="show:" + chosen.series_id).value == "All runs (aggregate)"
         summary = results.dataframe[0].value
         assert "median" in summary.columns and len(results.dataframe[1].value) == 3

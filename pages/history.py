@@ -45,6 +45,7 @@ def open_actions(found: list[runs.SolveRun]) -> None:
     run = ui.choose_run("Run", found)
     if runs.state(run).has_results:
         if st.button("Open the results", type="primary", icon=":material/insights:"):
+            ui.open_run(run)
             st.switch_page(ui.RESULTS)
     if st.button("Open in the monitor", icon=":material/monitoring:"):
         st.switch_page(ui.MONITOR)

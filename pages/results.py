@@ -1,7 +1,8 @@
 """Results: the front a run found, its quality indicators, its solutions, and how VAMOS ran it.
 
 The structure follows Transept's Results page (pages/results.py): the front with its extremes and
-knee, and the details of the run.
+knee, and the details of the run. A series of independent runs is one entry of the selector, which
+shows the aggregate of its runs or any of them (vamos_studio/series_view.py).
 """
 
 import json
@@ -10,8 +11,8 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from vamos_studio import charts, ui
-from vamos_studio.backend import approximate_fronts, runs
+from vamos_studio import charts, series_view, ui
+from vamos_studio.backend import approximate_fronts, runs, series
 from vamos_studio.backend.catalogue import problem_entry
 from vamos_studio.backend.indicators import available_indicators, compute_all
 from vamos_studio.backend.upstream.vamos_bridge import builtin_space
@@ -165,11 +166,20 @@ def show_details(run: runs.SolveRun, request: runs.SolveRequest) -> None:
 
 
 candidates = [run for run in runs.list_runs(runs.runs_directory()) if runs.state(run).has_results]
-run = ui.choose_run("Run", candidates)
-if run is None:
+opened_run = None if st.session_state.get(ui.SELECTED_SERIES) else ui.selected_run()
+chosen = ui.choose_run_or_series(
+    "Run or series", candidates, series.list_series(runs.runs_directory())
+)
+if chosen is None:
     st.info("No run has results yet.")
     st.page_link(ui.NEW_RUN, label="Launch a run", icon=":material/play_arrow:")
     st.stop()
+if isinstance(chosen, series.Series):
+    run = series_view.choose_view(chosen, opened_run)
+    if run is None:
+        st.stop()
+else:
+    run = chosen
 
 request = runs.read_request(run)
 selection = runs.read_selection(run)

@@ -206,7 +206,7 @@ count = int(
         value=1,
         step=1,
         help="Runs of the same configuration with consecutive seeds, from the seed above: a "
-        "series, analyzed together in Analyze › Independent runs.",
+        "series, analyzed together in Analyze › Results.",
     )
 )
 parallel = int(

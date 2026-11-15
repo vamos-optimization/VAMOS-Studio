@@ -6,7 +6,7 @@ Adapted from Transept's Monitor page (pages/monitor.py), by the same authors.
 import pandas as pd
 import streamlit as st
 
-from vamos_studio import charts, ui
+from vamos_studio import charts, series_view, ui
 from vamos_studio.backend import runs, series
 from vamos_studio.backend.runs import RunState
 
@@ -43,7 +43,7 @@ def show_outcome(run: runs.SolveRun, state: RunState) -> None:
         else:
             st.info("Stopped at your request: the results are what it found until then.")
         if st.button("Open the results", type="primary", icon=":material/insights:"):
-            ui.select_run(run)
+            ui.open_run(run)
             st.switch_page(ui.RESULTS)
         return
     status = runs.read_status(run)
@@ -186,7 +186,8 @@ def show_series(chosen: series.Series) -> None:
             st.warning(f"The series ended {current.value}: {len(finished)} runs have results.")
         if st.button("Open the results of the series", type="primary", icon=":material/insights:"):
             ui.select_series(chosen)
-            st.switch_page(ui.SERIES_RESULTS)
+            series_view.show_next(chosen, None)
+            st.switch_page(ui.RESULTS)
     else:
         st.warning(f"The series ended {current.value}, with no results.")
 
