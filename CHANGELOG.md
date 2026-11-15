@@ -6,7 +6,7 @@ with.
 
 ## 0.1.0 (unreleased)
 
-Works with VAMOS 1.1.
+Works with VAMOS 1.2 (1.2.1 or later).
 
 ### Added
 
@@ -120,3 +120,12 @@ Works with VAMOS 1.1.
 - Parameter spaces as grammars (`vamos.parameter-space` 1.0.0) and configurations as their
   derivations, with a validator, YAML serialization and content hashes; see
   `docs/design/parameter-spaces.md`.
+
+### Changed
+
+- **VAMOS 1.2.1 or later** (up to 1.3) instead of 1.1. Following VAMOS 1.2's new defaults, the
+  grammars of NSGA-II and SMS-EMOA for real-coded problems apply SBX with probability 0.9 instead
+  of 1.0, the simplex crossover's expansion defaults to 2.0 within [1, 3], and SMS-EMOA no longer
+  offers the three-parent crossovers (PCX, UNDX, simplex), which VAMOS 1.2 cannot run with
+  SMS-EMOA's pairs of parents. Explore lists VAMOS 1.2's constrained algorithms (CCMO, C-TAEA,
+  ToP, CMOEA-MS), not yet available in the studio. The k-means subset selection uses a fixed seed.
