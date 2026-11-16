@@ -9,6 +9,7 @@ Evolver-Studio use, so the studio's indicator values match theirs.
 |---|---|
 | `referenceFronts/ZDT1.csv` … `ZDT6.csv` | Reference fronts of the real-coded ZDT problems (ZDT5, binary, has none) |
 | `referenceFronts/DTLZ1.2D.csv` … `DTLZ7.3D.csv` | Reference fronts of DTLZ1–7 with two and three objectives |
+| `referenceFronts/DTLZ1.4D.csv` … `DTLZ7.8D.csv` | Reference fronts of DTLZ1–4 and DTLZ7 with four, six and eight objectives (jMetal has none of DTLZ5 and DTLZ6 beyond three) |
 
 The studio reads them instead of the reference fronts shipped with VAMOS 1.1, whose samples are
 inaccurate: up to 0.0146 off the true front for ZDT4 and 0.052 for DTLZ4 (three objectives), with

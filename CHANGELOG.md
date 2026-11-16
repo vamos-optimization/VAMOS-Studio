@@ -64,6 +64,14 @@ Works with VAMOS 1.2 (1.2.1 or later).
   and each run's quality indicators with their median, interquartile range, mean, standard
   deviation, minimum and maximum, to download, with the best run by any indicator) or any of its
   runs.
+- **DTLZ with up to 20 objectives**: New run offers 2 to 20 objectives for the DTLZ problems.
+  jMetal's reference fronts of DTLZ1–4 and DTLZ7 with four, six and eight objectives are copied
+  beside the others; with any other number (and DTLZ5 and DTLZ6 beyond three) a run has no exact
+  front and builds an approximate one by default. With four or more objectives every front is drawn
+  in parallel coordinates (Results, Monitor, series, Explore › Problems and the home page): one line
+  per solution across one axis per objective, each scaled over the reference front, with the values
+  on hover. MOEA/D needs a weight vector file for its number of objectives (none exists for six):
+  without one, New run says so and does not launch it.
 - **Approximate reference fronts**, for problems without a known front (the binary knapsack,
   QUBO and feature selection) or with arguments that change it, and for any other at the user's
   choice. A run can add its non-dominated solutions (its whole archive) to the approximate front
