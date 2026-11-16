@@ -3,7 +3,7 @@
 import pandas as pd
 import streamlit as st
 
-from vamos_studio import charts
+from vamos_studio import charts, on_demand
 from vamos_studio.backend.catalogue import (
     problem_entries,
     reference_front,
@@ -78,12 +78,20 @@ shift = controls[3].slider(
 
 front = reference_front(problem.key, n_obj)
 approximation = sample_front(front, n_points, shift)
-values = compute_all(approximation, front)
+if n_obj <= 3:
+    values = compute_all(approximation, front)
+else:  # the hypervolume may take long: on request
+    values = on_demand.computed(
+        f"sandbox:{problem.key}:{n_obj}:{n_points}:{shift}",
+        n_obj,
+        lambda: compute_all(approximation, front),
+    )
 
-metrics = st.columns(len(values))
-for column, entry in zip(metrics, available_indicators()):
-    arrow = "↑" if entry.maximized else "↓"
-    column.metric(f"{entry.short_name} {arrow}", f"{values[entry.key]:.4f}")
+if values is not None:
+    metrics = st.columns(len(values))
+    for column, entry in zip(metrics, available_indicators()):
+        arrow = "↑" if entry.maximized else "↓"
+        column.metric(f"{entry.short_name} {arrow}", f"{values[entry.key]:.4f}")
 
 st.plotly_chart(
     charts.front_figure(approximation, front, front_label="Approximation"), width="stretch"
@@ -93,17 +101,18 @@ st.caption(
     "the same file Evolver-Studio uses, so the values match its."
 )
 
-with st.expander("Values as a table"):
-    st.dataframe(
-        pd.DataFrame(
-            [
-                {
-                    "Indicator": entry.full_name,
-                    "Value": values[entry.key],
-                    "Better": "higher" if entry.maximized else "lower",
-                }
-                for entry in available_indicators()
-            ]
-        ),
-        hide_index=True,
-    )
+if values is not None:
+    with st.expander("Values as a table"):
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {
+                        "Indicator": entry.full_name,
+                        "Value": values[entry.key],
+                        "Better": "higher" if entry.maximized else "lower",
+                    }
+                    for entry in available_indicators()
+                ]
+            ),
+            hide_index=True,
+        )

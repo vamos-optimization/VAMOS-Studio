@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from vamos_studio import charts
+from vamos_studio import charts, on_demand
 from vamos_studio.backend import runs, series
 from vamos_studio.backend.indicators import available_indicators, compute_all
 from vamos_studio.series_summary import best_run, indicator_table, summarize
@@ -95,9 +95,15 @@ def _show_aggregate(chosen: series.Series) -> None:
 
 def _show_indicators(chosen: series.Series, pairs, reference) -> None:
     entries = available_indicators()
-    table = indicator_table(
-        [(member.seed, member.run.run_id, compute_all(front, reference)) for member, front in pairs]
+    table = on_demand.computed(
+        f"series:{chosen.series_id}:{len(pairs)}",
+        reference.shape[1],
+        lambda: indicator_table(
+            [(m.seed, m.run.run_id, compute_all(front, reference)) for m, front in pairs]
+        ),
     )
+    if table is None:
+        return
     keys = [entry.key for entry in entries]
     st.markdown("**Summary**")
     st.dataframe(summarize(table, keys), hide_index=True)

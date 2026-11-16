@@ -102,10 +102,14 @@ def describe_run(run: runs.SolveRun) -> str:
 
 @st.cache_data(show_spinner=False, max_entries=16)
 def result_quality(run_directory: str) -> str:
-    """HV and IGD+ of a run's result against its reference front, or "" without one."""
+    """HV and IGD+ of a run's result against its reference front, or "" without one.
+
+    Only with two or three objectives, where they take a moment: with more, Results computes them
+    on request.
+    """
     run = runs.SolveRun(Path(run_directory))
     reference, _ = runs.reference_front_of(run)
-    if reference is None:
+    if reference is None or reference.shape[1] > 3:
         return ""
     values = compute_all(runs.result_front(run)[0], reference)
     return f" · HV {values['hv']:.4f} · IGD+ {values['igd_plus']:.4g}"

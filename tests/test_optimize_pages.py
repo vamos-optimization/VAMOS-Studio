@@ -30,6 +30,12 @@ def number_input(app: AppTest, label: str):
     return next(widget for widget in app.number_input if widget.label == label)
 
 
+def compute_indicators(app: AppTest) -> AppTest:
+    """Press the button that computes the quality indicators (see vamos_studio/on_demand.py)."""
+    next(b for b in app.button if b.label == "Compute the quality indicators").click().run()
+    return app
+
+
 def checkbox(app: AppTest, label: str):
     return next(widget for widget in app.checkbox if widget.label == label)
 
@@ -151,7 +157,7 @@ class TestMonitorHistoryResults:
         monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(launched[0]))
 
         # Act
-        app = open_page(RESULTS)
+        app = compute_indicators(open_page(RESULTS))
 
         # Assert
         assert not app.exception
@@ -262,7 +268,7 @@ class TestUnboundedArchiveResults:
         run = runs.launch(make_request("zdt1", 15000, external_archive="unbounded"), tmp_path)
         wait_for_end(run)
         app = open_page(RESULTS)
-        subset_rows = len(app.dataframe[2].value)
+        subset_rows = len(app.dataframe[-1].value)
 
         # Act
         app.toggle[0].set_value(True).run()
@@ -271,7 +277,7 @@ class TestUnboundedArchiveResults:
         assert not app.exception
         assert "`farthest` subset selection" in app.info[0].value
         assert subset_rows == 100
-        assert len(app.dataframe[2].value) > 100
+        assert len(app.dataframe[-1].value) > 100
 
     def test_should_say_the_monitor_shows_the_result_subset(self, tmp_path, monkeypatch):
         # Arrange
@@ -435,6 +441,7 @@ class TestApproximateFrontsInThePages:
 
         # Act
         app.toggle[0].set_value(True).run()
+        compute_indicators(app)
 
         # Assert
         assert not app.exception
@@ -489,7 +496,7 @@ class TestSeriesInThePages:
         # Act
         monitor = open_page(MONITOR)
         history = open_page(HISTORY)
-        results = open_page(RESULTS)
+        results = compute_indicators(open_page(RESULTS))
 
         # Assert
         assert chosen.count == 3
@@ -534,7 +541,7 @@ class TestSeriesInThePages:
         # Arrange
         parent, _, chosen = launched_series
         monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(parent))
-        results = open_page(RESULTS)
+        results = compute_indicators(open_page(RESULTS))
 
         # Act
         next(b for b in results.button if b.label.startswith("Open the best run")).click().run()

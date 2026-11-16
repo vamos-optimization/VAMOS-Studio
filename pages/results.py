@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from vamos_studio import charts, series_view, ui
+from vamos_studio import charts, on_demand, series_view, ui
 from vamos_studio.backend import approximate_fronts, runs, series
 from vamos_studio.backend.catalogue import problem_entry
 from vamos_studio.backend.indicators import available_indicators, compute_all
@@ -50,14 +50,16 @@ def show_front(front: np.ndarray, reference: np.ndarray | None, problem: str) ->
     st.dataframe(marked, hide_index=True)
 
 
-def show_indicators(front: np.ndarray, reference: np.ndarray | None, label: str) -> None:
+def show_indicators(front: np.ndarray, reference: np.ndarray | None, label: str, key: str) -> None:
     if reference is None:
         st.info(
             "There is no reference front for this run, so no indicator is computed. Runs added to "
             "the approximate front of its problem make one: see below and Explore › Problems."
         )
         return
-    values = compute_all(front, reference)
+    values = on_demand.computed(key, front.shape[1], lambda: compute_all(front, reference))
+    if values is None:
+        return
     st.dataframe(
         pd.DataFrame(
             [
@@ -216,7 +218,7 @@ with front_tab:
     show_contribution(run)
 with indicators_tab:
     measured_with, measured_label = newer_version_choice(run, request, reference, reference_label)
-    show_indicators(front, measured_with, measured_label)
+    show_indicators(front, measured_with, measured_label, f"{run.run_id}:{measured_label}:{whole}")
 with solutions_tab:
     show_solutions(front, variables, run.run_id)
 with details_tab:
