@@ -72,6 +72,16 @@ Works with VAMOS 1.2 (1.2.1 or later).
   per solution across one axis per objective, each scaled over the reference front, with the values
   on hover. MOEA/D needs a weight vector file for its number of objectives (none exists for six):
   without one, New run says so and does not launch it.
+- **AGE-MOEA, RVEA and SPEA2** for real-coded problems: their grammars (`agemoea_real`, `rvea_real`,
+  `spea2_real`), built from VAMOS's tuning spaces with the same changes as SMS-EMOA's (external
+  archive, a distribution index per polynomial mutation, the mutation probability as a factor of
+  1/n), whose defaults run exactly as VAMOS's. RVEA has no population of its own: it is the
+  Das-Dennis lattice of its divisions for the problem's objectives (13 with two, 91 with three, by
+  default), and New run shows it.
+- **Quality indicators on request**: Results, the aggregate of a series and, with four or more
+  objectives, the indicator sandbox compute them when asked, with a warning from five objectives
+  that the hypervolume may take long; values computed are kept while the session lasts. The home
+  page shows HV and IGD+ of the latest result only with two or three objectives.
 - **Approximate reference fronts**, for problems without a known front (the binary knapsack,
   QUBO and feature selection) or with arguments that change it, and for any other at the user's
   choice. A run can add its non-dominated solutions (its whole archive) to the approximate front
