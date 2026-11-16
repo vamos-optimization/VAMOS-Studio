@@ -114,4 +114,17 @@ SECTIONS = (
             ),
         ),
     ),
+    Section(
+        "Learn",
+        (
+            Page(
+                "pages/tutorials.py",
+                "Tutorials",
+                ":material/school:",
+                "Interactive, step-by-step tutorials by level, with notebooks that do the same "
+                "with VAMOS's Python API.",
+                available=True,
+            ),
+        ),
+    ),
 )
