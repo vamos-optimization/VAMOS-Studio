@@ -19,7 +19,7 @@ from vamos_studio.backend.catalogue import (
     problem_entry,
     reference_front,
 )
-from vamos_studio.backend.indicators import compute_all
+from vamos_studio.backend.indicators import available_indicators, compute_all
 from vamos_studio.branding import LOGO_CARD
 from vamos_studio.home_panel import (
     Activity,
@@ -30,6 +30,7 @@ from vamos_studio.home_panel import (
 )
 from vamos_studio.sections import SECTIONS, Page, Section
 from vamos_studio.theme import is_dark
+from vamos_studio.tutorials import TUTORIALS
 
 VAMOS_URL = "https://github.com/vamos-optimization/VAMOS"
 CHANGELOG = Path(__file__).resolve().parent.parent / "CHANGELOG.md"
@@ -37,7 +38,15 @@ HERO_FRONT = ("dtlz2", 3)
 GRADIENT = [[0.0, "#2F87E0"], [1.0, "#1BA89A"]]
 # The grid of the front of the home page, light or dark as the theme.
 GRID_COLOURS = {False: "#D6E2EE", True: "#24364A"}
-CARDS_PER_ROW = 2
+SECTIONS_PER_ROW = 2
+# The sections that are steps of a study, numbered in this order on the home page, as in Transept.
+STEPS = ("Explore", "Optimize", "Analyze")
+SECTION_ICONS = {
+    "Explore": ":material/travel_explore:",
+    "Optimize": ":material/rocket_launch:",
+    "Analyze": ":material/insights:",
+    "Learn": ":material/school:",
+}
 RECENT_RUNS = 4
 HERO_HEIGHT = 330
 HERO_REFRESH_SECONDS = 1.0
@@ -210,23 +219,6 @@ def render_hero(installed: str | None, summary: Activity) -> None:
         render_picture(summary)
 
 
-def render_metrics(summary: Activity) -> None:
-    running = summary.by_state.get(runs.RunState.RUNNING, 0) + summary.by_state.get(
-        runs.RunState.STARTING, 0
-    )
-    for column, (label, value) in zip(
-        st.columns(4),
-        [
-            ("Runs", summary.total),
-            ("With results", summary.finished),
-            ("Running now", running),
-            ("Series", summary.series_count),
-        ],
-    ):
-        with column.container(border=True):
-            st.metric(label, value)
-
-
 def render_recent(summary: Activity) -> None:
     """The newest runs, one line each, with a button to open each one."""
     st.subheader("Recent runs")
@@ -288,25 +280,63 @@ def render_news() -> None:
             st.markdown(f"- {lead}")
 
 
-def render_card(section: Section, page: Page) -> None:
+def section_state(name: str, summary: Activity) -> str:
+    """What a section has now, in a few words, as Transept's home page says it."""
+    if name == "Explore":
+        problems = sum(entry.available for entry in problem_entries())
+        return (
+            f"{plural(len(algorithm_entries()), 'algorithm')} · {plural(problems, 'problem')} · "
+            f"{plural(len(available_indicators()), 'quality indicator')}"
+        )
+    if name == "Optimize":
+        return (
+            f"{running_now(summary)} running · {plural(summary.total, 'run')} · "
+            f"{plural(summary.series_count, 'series', 'series')}"
+        )
+    if name == "Analyze":
+        return f"{plural(summary.finished, 'run')} with results"
+    written = sum(item.available for item in TUTORIALS)
+    return f"{plural(written, 'tutorial')}, with notebooks"
+
+
+def plural(count: int, noun: str, many: str | None = None) -> str:
+    return f"{count:,} {noun if count == 1 else many or noun + 's'}"
+
+
+def running_now(summary: Activity) -> int:
+    return summary.by_state.get(runs.RunState.RUNNING, 0) + summary.by_state.get(
+        runs.RunState.STARTING, 0
+    )
+
+
+def render_section(number: int, section: Section, summary: Activity) -> None:
+    """A section of the studio: its pages, each a link with what it offers."""
     with st.container(border=True, height="stretch"):
-        st.caption(section.name.upper())
-        st.markdown(f"#### {page.icon} {page.title}")
-        if not page.available:
-            st.badge("Coming soon", icon=":material/construction:", color="gray")
-        st.markdown(page.description)
-        st.page_link(page.path, label=f"Open {page.title}", icon=":material/arrow_forward:")
+        heading = f"{number} · {section.name}" if section.name in STEPS else section.name
+        st.markdown(f"#### {SECTION_ICONS[section.name]} {heading}")
+        st.caption(section_state(section.name, summary))
+        for page in section.pages:
+            render_page(page)
 
 
-def render_pages() -> None:
+def render_page(page: Page) -> None:
+    st.markdown(f"##### {page.icon} {page.title}")
+    if not page.available:
+        st.badge("Coming soon", icon=":material/construction:", color="gray")
+    st.markdown(f":gray[{page.description}]")
+    st.page_link(page.path, label=f"Open {page.title}", icon=":material/arrow_forward:")
+
+
+def render_sections(summary: Activity) -> None:
+    """The sections of the studio in a grid: the steps of a study in order, then Learn."""
     st.subheader("Everything in the studio")
-    cards = [(section, page) for section in SECTIONS for page in section.pages]
-    for start in range(0, len(cards), CARDS_PER_ROW):
-        for column, (section, page) in zip(
-            st.columns(CARDS_PER_ROW), cards[start : start + CARDS_PER_ROW]
+    for start in range(0, len(SECTIONS), SECTIONS_PER_ROW):
+        row = SECTIONS[start : start + SECTIONS_PER_ROW]
+        for column, (number, section) in zip(
+            st.columns(SECTIONS_PER_ROW), enumerate(row, start=start + 1)
         ):
             with column:
-                render_card(section, page)
+                render_section(number, section, summary)
 
 
 def _problem_label(key: str) -> str:
@@ -318,10 +348,9 @@ def _problem_label(key: str) -> str:
 
 summary = activity(runs.runs_directory(), limit=RECENT_RUNS)
 render_hero(vamos_version(), summary)
-render_metrics(summary)
 pages, side = st.columns([3, 2], gap="large")
 with pages:
-    render_pages()
+    render_sections(summary)
 with side:
     render_getting_started()
     render_news()

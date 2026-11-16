@@ -47,12 +47,37 @@ class TestHomePage:
         # Assert
         assert any(caption.value.startswith("Backend: VAMOS ") for caption in app.caption)
 
-    def test_should_show_a_card_for_every_page(self, app: AppTest):
+    def test_should_show_every_page_under_its_section(self, app: AppTest):
         # Act
-        titles = [markdown.value for markdown in app.markdown if markdown.value.startswith("####")]
+        headings = [
+            markdown.value.split(" ", 1)[0] + " " + markdown.value.rsplit(" ", 1)[-1]
+            for markdown in app.markdown
+            if markdown.value.startswith("####")
+        ]
 
         # Assert
-        assert titles == [f"#### {page.icon} {page.title}" for page in PAGES]
+        assert headings == [
+            line
+            for section in SECTIONS
+            for line in (
+                f"#### {section.name}",
+                *(f"##### {page.title.rsplit(' ', 1)[-1]}" for page in section.pages),
+            )
+        ]
+
+    def test_should_number_the_steps_of_a_study(self, app: AppTest):
+        # Act
+        sections = [
+            markdown.value for markdown in app.markdown if markdown.value.startswith("#### ")
+        ]
+
+        # Assert
+        assert [heading.split(" ", 2)[2] for heading in sections] == [
+            "1 · Explore",
+            "2 · Optimize",
+            "3 · Analyze",
+            "Learn",
+        ]
 
 
 class TestPages:
