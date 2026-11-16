@@ -15,11 +15,15 @@ Works with VAMOS 1.2 (1.2.1 or later).
 - **The VAMOS logo and colors**: the logo heads the menu and the home page, its V is the tab's
   icon, and the theme takes its colors (blue to teal on navy) and typefaces (Montserrat and IBM
   Plex Sans).
+- **A light and a dark theme**: the studio follows the system's preference, and ⋮ › Settings
+  chooses Light, Dark or System. The dark theme takes the colors of the VAMOS website's dark mode;
+  the figures of fronts and the logo have their own tones for it.
 - **Home** as a panel of the studio: the front of the latest run (live while it runs, with a link to
   the Monitor; once finished, over its reference front with its HV and IGD+ and a link to Results;
   DTLZ2's front before any run), a first run in one click (NSGA-II on ZDT1, followed in the
-  Monitor), counts of runs and series, a card for each page next to first steps, the news of this
-  changelog and the four latest runs, one line each with their state.
+  Monitor), the pages grouped by section as in Transept (Explore, Optimize and Analyze numbered
+  as the steps of a study, then Learn), each section with what it has now, next to first steps, the
+  news of this changelog and the four latest runs, one line each with their state.
 - **Explore › Algorithms** (prototype): the parameter space of NSGA-II for real-coded problems
   as a grammar, shown as a tree, as a table of parameters with when each one is active, as its
   default configuration (a command line that runs exactly as VAMOS's default NSGA-II) and as
