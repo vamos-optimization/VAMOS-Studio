@@ -3,6 +3,7 @@
 A run is launched from New run as a user would, and then followed in the other pages.
 """
 
+import dataclasses
 from pathlib import Path
 
 import pytest
@@ -166,6 +167,19 @@ class TestMonitorHistoryResults:
         assert indicators["Indicator"].str.startswith("HV").any()
         assert any(metric.label == "Evaluations" for metric in app.metric)
 
+    def test_should_compute_the_indicators_only_on_request(self, launched, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(launched[0]))
+
+        # Act
+        app = open_page(RESULTS)
+
+        # Assert
+        assert not app.exception
+        assert "Compute the quality indicators" in [b.label for b in app.button]
+        assert not any("Indicator" in table.value.columns for table in app.dataframe)
+        assert not app.warning
+
     def test_should_say_there_are_no_results_without_runs(self, tmp_path, monkeypatch):
         # Arrange
         monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
@@ -229,6 +243,21 @@ class TestManyObjectives:
         assert not results.exception
         assert any("and 4 objectives" in c.value for c in results.caption)
         assert '"type":"scattergl"' in results.get("plotly_chart")[0].proto.spec.replace(" ", "")
+
+    def test_should_warn_before_computing_indicators_with_many_objectives(
+        self, tmp_path, monkeypatch
+    ):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        run = runs.launch(dataclasses.replace(make_request("dtlz2", 1000), n_obj=6), tmp_path)
+        wait_for_end(run)
+
+        # Act
+        app = open_page(RESULTS)
+
+        # Assert
+        assert not app.exception
+        assert any("With 6 objectives the hypervolume" in w.value for w in app.warning)
 
     def test_should_build_an_approximate_front_without_an_exact_one(self, tmp_path, monkeypatch):
         # Arrange
