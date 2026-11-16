@@ -19,6 +19,7 @@ a Python framework for multi-objective optimization. It is inspired by
 | | **Monitor** | Follow a run or a series live, with the fronts as they converge; stop it keeping its results, or cancel it |
 | | **History** | Every run with its state; open one in the monitor or the results |
 | **Analyze** | **Results** | The front with its knee and extremes, the quality indicators, the solutions and the details of the run; for a series of independent runs, their fronts and union and their quality indicators with summary statistics, or any of its runs |
+| **Learn** | **Tutorials** | Interactive tutorials by level (S1–S4 basic so far): runs launched from the tutorial with the values to expect, and Jupyter notebooks that do the same with VAMOS's Python API |
 
 Runs go on in the background and are kept in `solve-runs/` (set `VAMOS_STUDIO_RUNS` to use another
 directory), each with VAMOS's run artifact. For problems without a known reference front, runs can

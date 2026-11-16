@@ -78,6 +78,15 @@ Works with VAMOS 1.2 (1.2.1 or later).
   1/n), whose defaults run exactly as VAMOS's. RVEA has no population of its own: it is the
   Das-Dennis lattice of its divisions for the problem's objectives (13 with two, 91 with three, by
   default), and New run shows it.
+- **Tutorials** (Learn › Tutorials), as Evolver-Studio's: interactive and step by step, grouped by
+  level, each paired with the tutorials of VAMOS's documentation. The basic ones are written: S1. A
+  tour of VAMOS-Studio, S2. Solving a problem, S3. Reading a front and its quality indicators, and
+  S4. Exploring a parameter space; the others are listed as planned. A tutorial launches its runs
+  from a button, fixed by a seed, and says whether they give the values it announces. Unlike
+  Evolver-Studio, each tutorial that runs something comes with a Jupyter notebook that does the same
+  with VAMOS's Python API (`vamos_studio/notebooks/`, written by
+  `scripts/make_tutorial_notebooks.py`); the tests execute the notebooks and check that they find
+  those values.
 - **NSGA-III** for real-coded problems (`nsgaiii_real`), whose default runs exactly as VAMOS's: SBX
   with distribution index 30, a tournament (VAMOS's NSGA-III selects only by tournament) and the
   largest Das-Dennis lattice of reference directions that fits the population. New run says how many
