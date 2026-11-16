@@ -29,6 +29,12 @@ COPIED_FILES: Final = tuple(
         for number in range(1, 8)
         for n_obj in (2, 3)
     ]
+    # jMetal has many-objective fronts of DTLZ1-4 and DTLZ7, not of the degenerate DTLZ5 and DTLZ6.
+    + [
+        f"resources/referenceFronts/DTLZ{number}.{n_obj}D.csv"
+        for number in (1, 2, 3, 4, 7)
+        for n_obj in (4, 6, 8)
+    ]
 )
 
 
