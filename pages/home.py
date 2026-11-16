@@ -20,7 +20,7 @@ from vamos_studio.backend.catalogue import (
     reference_front,
 )
 from vamos_studio.backend.indicators import compute_all
-from vamos_studio.branding import LOGO
+from vamos_studio.branding import LOGO_CARD
 from vamos_studio.home_panel import (
     Activity,
     RecentRun,
@@ -29,11 +29,14 @@ from vamos_studio.home_panel import (
     quick_start_request,
 )
 from vamos_studio.sections import SECTIONS, Page, Section
+from vamos_studio.theme import is_dark
 
 VAMOS_URL = "https://github.com/vamos-optimization/VAMOS"
 CHANGELOG = Path(__file__).resolve().parent.parent / "CHANGELOG.md"
 HERO_FRONT = ("dtlz2", 3)
 GRADIENT = [[0.0, "#2F87E0"], [1.0, "#1BA89A"]]
+# The grid of the front of the home page, light or dark as the theme.
+GRID_COLOURS = {False: "#D6E2EE", True: "#24364A"}
 CARDS_PER_ROW = 2
 RECENT_RUNS = 4
 HERO_HEIGHT = 330
@@ -67,7 +70,12 @@ def hero_figure() -> go.Figure | None:
             hoverinfo="skip",
         )
     )
-    axis = {"showbackground": False, "showticklabels": False, "title": "", "gridcolor": "#D6E2EE"}
+    axis = {
+        "showbackground": False,
+        "showticklabels": False,
+        "title": "",
+        "gridcolor": GRID_COLOURS[is_dark()],
+    }
     figure.update_layout(
         height=HERO_HEIGHT,
         margin={"l": 0, "r": 0, "t": 0, "b": 0},
@@ -169,7 +177,7 @@ def launch_quick_start() -> None:
 def render_hero(installed: str | None, summary: Activity) -> None:
     text, picture = st.columns([5, 4], vertical_alignment="center")
     with text:
-        st.image(LOGO, width=400)
+        st.image(LOGO_CARD, width=400)
         st.title("Explore, run and analyze")
         st.markdown(
             f"A workbench for [VAMOS]({VAMOS_URL}): explore its algorithms and problems, run them "

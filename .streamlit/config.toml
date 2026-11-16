@@ -1,26 +1,44 @@
 # VAMOS-Studio's look: the colors of the VAMOS logo (blue to teal on navy), its typefaces
 # (Montserrat for headings, as the wordmark; IBM Plex Sans for text, as the tagline).
+# Two themes, light and dark (the dark one with the colors of the VAMOS website's dark mode): the
+# studio follows the system's preference, and the viewer can choose one in ⋮ › Settings.
 
 [theme]
-base = "light"
-primaryColor = "#1F8FD6"
-backgroundColor = "#FBFCFE"
-secondaryBackgroundColor = "#EEF4FA"
-textColor = "#14173F"
-linkColor = "#1A9C93"
-borderColor = "#D6E2EE"
 showWidgetBorder = true
 baseRadius = "0.6rem"
 font = "IBM Plex Sans:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap, sans-serif"
 headingFont = "Montserrat:https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&display=swap, sans-serif"
 codeFont = "monospace"
 headingFontWeights = [800, 700, 700, 600, 600, 600]
+
+[theme.light]
+primaryColor = "#1F8FD6"
+backgroundColor = "#FBFCFE"
+secondaryBackgroundColor = "#EEF4FA"
+textColor = "#14173F"
+linkColor = "#1A9C93"
+borderColor = "#D6E2EE"
 chartCategoricalColors = ["#2F87E0", "#1BA89A", "#14173F", "#F2A541", "#9B5DE5", "#D94A57", "#7FB8E6", "#7AD3C6"]
 blueColor = "#2F87E0"
 greenColor = "#1A9C93"
 
-[theme.sidebar]
+[theme.light.sidebar]
 backgroundColor = "#F2F6FB"
+
+[theme.dark]
+primaryColor = "#3AA0E6"
+backgroundColor = "#0D1724"
+secondaryBackgroundColor = "#152435"
+textColor = "#D8E2EA"
+linkColor = "#5EEAD4"
+borderColor = "#26384B"
+# Checked for colour-blind separation and contrast against the dark background.
+chartCategoricalColors = ["#3A8CE4", "#16A38A", "#8381E4", "#C07E22", "#BA6CCC", "#E5605A"]
+blueColor = "#4FA3E8"
+greenColor = "#2CC4B4"
+
+[theme.dark.sidebar]
+backgroundColor = "#0A1320"
 
 [client]
 # Hide the developer options (Deploy, Rerun settings) from the toolbar.

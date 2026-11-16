@@ -17,7 +17,7 @@ from vamos_studio.backend.bundled_resources import (
     source_url,
     write_manifest,
 )
-from vamos_studio.branding import LOGO, MARK, WORDMARK
+from vamos_studio.branding import LOGO, LOGO_CARD, MARK, WORDMARK, WORDMARK_DARK
 
 
 class TestPaths:
@@ -90,4 +90,6 @@ class TestCopiedResources:
 class TestBranding:
     def test_should_ship_the_logo_the_wordmark_and_the_mark(self):
         # Assert
-        assert all(Path(path).is_file() for path in (LOGO, WORDMARK, MARK))
+        assert all(
+            Path(path).is_file() for path in (LOGO, WORDMARK, MARK, LOGO_CARD, WORDMARK_DARK)
+        )

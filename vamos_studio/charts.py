@@ -1,15 +1,17 @@
 """Plotly figures of fronts: in 2D, in 3D, or in parallel coordinates with four or more objectives.
 
 The palette is Transept's (transept/charts.py): the reference front in grey, the front in blue,
-the selected solution in red. A front of three objectives is drawn in 3D, which can be rotated,
-and in its three two-objective projections, as Transept draws its fronts of three objectives. With
-four or more objectives each solution is a line across one axis per objective (parallel
+the selected solution in red; with the dark theme, tones of the same colours that stand out on a
+dark background. A front of three objectives is drawn in 3D, which can be rotated, and in its three
+two-objective projections, as Transept draws its fronts of three objectives. With four or more
+objectives each solution is a line across one axis per objective (parallel
 coordinates), each objective scaled to [0, 1] over the reference front, or over the solutions drawn
 when there is none.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from itertools import combinations
 
 import numpy as np
@@ -17,15 +19,41 @@ import plotly.graph_objects as go
 from numpy.typing import NDArray
 from plotly.subplots import make_subplots
 
-REFERENCE_COLOUR = "#b7bcc5"
-FRONT_COLOUR = "#1769aa"
-SELECTED_COLOUR = "#d62728"
+from vamos_studio.theme import is_dark
+
+
+@dataclass(slots=True, frozen=True)
+class Palette:
+    """The colours of the figures of fronts, for one theme.
+
+    Attributes:
+        reference: The reference front; also the runs of a series, drawn behind their union.
+        faint: The reference front when the runs of a series are drawn over it in `reference`.
+        parallel_reference: The lines of the reference front in parallel coordinates.
+        front: The front.
+        selected: The solution marked, such as the knee.
+    """
+
+    reference: str
+    faint: str
+    parallel_reference: str
+    front: str
+    selected: str
+
+
+LIGHT = Palette("#b7bcc5", "#e3e6ea", "#d5d9df", "#1769aa", "#d62728")
+DARK = Palette("#4b5b6c", "#2c3a4a", "#34424f", "#4fa3e8", "#f0605d")
 # From this number of objectives on, fronts are drawn in parallel coordinates.
 PARALLEL_FROM = 4
 # At most this many lines of a reference front are drawn in parallel coordinates.
 MAX_PARALLEL_REFERENCE_LINES = 1500
 
 Front = NDArray[np.float64]
+
+
+def palette() -> Palette:
+    """The colours for the theme the viewer sees."""
+    return DARK if is_dark() else LIGHT
 
 
 def n_objectives(front: Front | None, reference_front: Front | None) -> int:
@@ -54,9 +82,10 @@ def front_figure(
     """
     labels = (front_label, highlighted_label)
     if n_objectives(front, reference_front) >= PARALLEL_FROM:
-        groups = [(front, labels[0], FRONT_COLOUR, 1.5)]
+        colours = palette()
+        groups = [(front, labels[0], colours.front, 1.5)]
         if front is not None and highlighted is not None:
-            groups.append((front[highlighted : highlighted + 1], labels[1], SELECTED_COLOUR, 4.0))
+            groups.append((front[highlighted : highlighted + 1], labels[1], colours.selected, 4.0))
         return parallel_figure(groups, reference_front)
     if n_objectives(front, reference_front) == 3:
         return _figure_3d(front, reference_front, highlighted, labels)
@@ -103,14 +132,15 @@ def _traces_2d(
     labels: tuple[str, str],
     pair: tuple[int, int],
 ) -> list[go.Scatter]:
+    colours = palette()
     traces = []
     if reference_front is not None:
-        traces.append(_scatter(reference_front, pair, "Reference front", REFERENCE_COLOUR, 3))
+        traces.append(_scatter(reference_front, pair, "Reference front", colours.reference, 3))
     if front is not None and len(front):
-        traces.append(_scatter(front, pair, labels[0], FRONT_COLOUR, 7))
+        traces.append(_scatter(front, pair, labels[0], colours.front, 7))
         if highlighted is not None:
             point = front[highlighted : highlighted + 1]
-            trace = _scatter(point, pair, labels[1], SELECTED_COLOUR, 14)
+            trace = _scatter(point, pair, labels[1], colours.selected, 14)
             trace.marker.symbol = "star"
             traces.append(trace)
     return traces
@@ -122,16 +152,17 @@ def _figure_3d(
     highlighted: int | None,
     labels: tuple[str, str],
 ) -> go.Figure:
+    colours = palette()
     figure = go.Figure()
     if reference_front is not None:
         figure.add_trace(
-            _scatter_3d(reference_front, "Reference front", REFERENCE_COLOUR, 2, opacity=0.5)
+            _scatter_3d(reference_front, "Reference front", colours.reference, 2, opacity=0.5)
         )
     if front is not None and len(front):
-        figure.add_trace(_scatter_3d(front, labels[0], FRONT_COLOUR, 4))
+        figure.add_trace(_scatter_3d(front, labels[0], colours.front, 4))
         if highlighted is not None:
             point = front[highlighted : highlighted + 1]
-            trace = _scatter_3d(point, labels[1], SELECTED_COLOUR, 8)
+            trace = _scatter_3d(point, labels[1], colours.selected, 8)
             trace.marker.symbol = "diamond"
             figure.add_trace(trace)
     figure.update_layout(
@@ -174,24 +205,25 @@ def series_figure(
 
     As Transept draws the runs of a series (transept/charts.py, series_front_figure).
     """
+    colours = palette()
     if n_objectives(aggregate, reference_front) >= PARALLEL_FROM:
         return parallel_figure(
             [
-                (_stacked(fronts), "Runs", REFERENCE_COLOUR, 1.0),
-                (aggregate, "Union of the runs", FRONT_COLOUR, 1.5),
+                (_stacked(fronts), "Runs", colours.reference, 1.0),
+                (aggregate, "Union of the runs", colours.front, 1.5),
             ],
             reference_front,
         )
     three = n_objectives(aggregate, reference_front) == 3
     figure = go.Figure()
     if reference_front is not None:
-        figure.add_trace(_any_scatter(reference_front, "Reference front", "#e3e6ea", 2, three))
+        figure.add_trace(_any_scatter(reference_front, "Reference front", colours.faint, 2, three))
     for index, front in enumerate(fronts):
-        trace = _any_scatter(front, "Runs", REFERENCE_COLOUR, 4, three)
+        trace = _any_scatter(front, "Runs", colours.reference, 4, three)
         trace.showlegend = index == 0
         trace.legendgroup = "runs"
         figure.add_trace(trace)
-    figure.add_trace(_any_scatter(aggregate, "Union of the runs", FRONT_COLOUR, 6, three))
+    figure.add_trace(_any_scatter(aggregate, "Union of the runs", colours.front, 6, three))
     layout = {"legend": {"orientation": "h", "y": -0.15}, "margin": {"t": 20}}
     if three:
         layout["scene"] = {"xaxis_title": "f1", "yaxis_title": "f2", "zaxis_title": "f3"}
@@ -209,22 +241,23 @@ def series_live_figure(
 
     As Transept follows a series (transept/charts.py, series_progress_figure), with fronts.
     """
+    colours = palette()
     drawn = [*active, *finished]
     if n_objectives(drawn[0] if drawn else None, reference_front) >= PARALLEL_FROM:
         return parallel_figure(
             [
-                (_stacked(finished), "Finished runs", REFERENCE_COLOUR, 1.0),
-                (_stacked(active), "Runs in progress", FRONT_COLOUR, 1.5),
+                (_stacked(finished), "Finished runs", colours.reference, 1.0),
+                (_stacked(active), "Runs in progress", colours.front, 1.5),
             ],
             reference_front,
         )
     three = n_objectives(drawn[0] if drawn else None, reference_front) == 3
     figure = go.Figure()
     if reference_front is not None:
-        figure.add_trace(_any_scatter(reference_front, "Reference front", "#e3e6ea", 2, three))
+        figure.add_trace(_any_scatter(reference_front, "Reference front", colours.faint, 2, three))
     groups = (
-        (finished, "Finished runs", REFERENCE_COLOUR, 4),
-        (active, "Runs in progress", FRONT_COLOUR, 6),  # last, so that they are on top
+        (finished, "Finished runs", colours.reference, 4),
+        (active, "Runs in progress", colours.front, 6),  # last, so that they are on top
     )
     for fronts, name, colour, size in groups:
         for index, front in enumerate(fronts):
@@ -270,7 +303,9 @@ def parallel_figure(
     if reference_front is not None:
         sample = _sample_rows(reference_front, MAX_PARALLEL_REFERENCE_LINES)
         figure.add_trace(
-            _parallel_trace(sample, low, span, "Reference front", "#d5d9df", 1.0, hover=False)
+            _parallel_trace(
+                sample, low, span, "Reference front", palette().parallel_reference, 1.0, hover=False
+            )
         )
     for points, name, colour, width in groups:
         if points is not None and len(points):
