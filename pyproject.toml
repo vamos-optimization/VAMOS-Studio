@@ -30,6 +30,10 @@ fast = [
 dev = [
     "pytest",
     "ruff",
+    # The tests execute the tutorials' notebooks.
+    "nbformat",
+    "nbclient",
+    "ipykernel",
 ]
 
 [tool.setuptools.packages.find]
@@ -37,6 +41,7 @@ include = ["vamos_studio*"]
 
 [tool.setuptools.package-data]
 "vamos_studio.backend.upstream.spaces" = ["*.yaml"]
+"vamos_studio.notebooks" = ["*.ipynb"]
 "vamos_studio" = ["resources/*.txt", "resources/*.md", "resources/SHA256SUMS", "resources/referenceFronts/*.csv", "resources/branding/*.png", "resources/branding/*.md"]
 
 [tool.ruff]
