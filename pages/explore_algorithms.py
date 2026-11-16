@@ -19,8 +19,9 @@ st.markdown(
     "own parameters."
 )
 st.info(
-    "Prototype: **NSGA-II**, **MOEA/D** and **SMS-EMOA** are available, for **real-coded** and "
-    "**binary** problems. The other algorithms and encodings are listed but not active yet.",
+    "The algorithms with a parameter space in the studio are available; NSGA-II, MOEA/D and "
+    "SMS-EMOA also for **binary** problems. The other algorithms and encodings are listed but "
+    "not active yet (see *Availability*).",
     icon=":material/construction:",
 )
 
