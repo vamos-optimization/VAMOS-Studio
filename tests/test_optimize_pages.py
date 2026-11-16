@@ -296,7 +296,7 @@ class TestManyObjectives:
 
 
 class TestMoreAlgorithms:
-    @pytest.mark.parametrize("label", ["AGE-MOEA", "RVEA", "SPEA2"])
+    @pytest.mark.parametrize("label", ["AGE-MOEA", "RVEA", "SPEA2", "NSGA-III"])
     def test_should_launch_the_algorithm_and_show_its_results(self, label, tmp_path, monkeypatch):
         # Arrange
         monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))

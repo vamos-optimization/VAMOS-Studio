@@ -10,7 +10,14 @@ import numpy as np
 import pytest
 import vamos
 from conftest import make_request, wait_for_end
-from vamos.algorithms import AGEMOEAConfig, MOEADConfig, RVEAConfig, SMSEMOAConfig, SPEA2Config
+from vamos.algorithms import (
+    AGEMOEAConfig,
+    MOEADConfig,
+    NSGAIIIConfig,
+    RVEAConfig,
+    SMSEMOAConfig,
+    SPEA2Config,
+)
 from vamos.engine.tuning.racing import bridge_spaces
 from vamos.engine.tuning.racing.param_space import Categorical, Int, Real
 
@@ -43,6 +50,7 @@ SPACES = [
     ("agemoea", "real"),
     ("rvea", "real"),
     ("spea2", "real"),
+    ("nsgaiii", "real"),
 ]
 
 
@@ -121,6 +129,21 @@ class TestDefaultConfiguration:
         default = RVEAConfig.default(pop_size=pop_size, n_var=n_var, n_obj=n_obj)
         assert config.pop_size == pop_size
         assert np.array_equal(front, _front("rvea", default, problem))
+
+    @pytest.mark.parametrize(("problem", "n_obj"), [("zdt1", None), ("dtlz2", 3), ("dtlz2", 8)])
+    def test_should_run_nsgaiii_exactly_as_the_vamos_default(self, problem, n_obj):
+        # Arrange
+        selection = vamos.make_problem_selection(problem, n_obj=n_obj)
+        n_var, objectives = int(selection.n_var), int(selection.n_obj)
+        space = builtin_space("nsgaiii", "real")
+        config = to_algorithm_config(space.default_configuration(), n_var, objectives)
+
+        # Act
+        front = _front("nsgaiii", config, problem, n_obj)
+
+        # Assert
+        default = NSGAIIIConfig.default(pop_size=100, n_var=n_var, n_obj=objectives)
+        assert np.array_equal(front, _front("nsgaiii", default, problem, n_obj))
 
     @pytest.mark.parametrize("algorithm", ["moead", "smsemoa"])
     def test_should_solve_a_binary_problem_with_bits(self, algorithm):
