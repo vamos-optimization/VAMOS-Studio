@@ -290,6 +290,30 @@ class TestManyObjectives:
         assert next(b for b in app.button if b.label == "Launch the run").disabled
 
 
+class TestMoreAlgorithms:
+    @pytest.mark.parametrize("label", ["AGE-MOEA", "RVEA", "SPEA2"])
+    def test_should_launch_the_algorithm_and_show_its_results(self, label, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        app = open_page(NEW_RUN)
+        algorithm = next(box for box in app.selectbox if box.label == "Algorithm")
+        algorithm.select_index(algorithm.options.index(label)).run()
+        number_input(app, "Evaluations").set_value(1500).run()
+        captions = [caption.value for caption in app.caption]
+
+        # Act
+        next(b for b in app.button if b.label == "Launch the run").click().run()
+        run = runs.list_runs(tmp_path)[0]
+        state = wait_for_end(run)
+        results = open_page(RESULTS)
+
+        # Assert
+        assert not app.exception and not results.exception
+        assert state == RunState.FINISHED
+        if label == "RVEA":
+            assert any("RVEA runs with 13 solutions" in caption for caption in captions)
+
+
 class TestUnboundedArchiveResults:
     def test_should_show_the_subset_and_toggle_the_whole_archive(self, tmp_path, monkeypatch):
         # Arrange

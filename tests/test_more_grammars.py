@@ -1,4 +1,4 @@
-"""Tests for the MOEA/D and SMS-EMOA grammars against VAMOS.
+"""Tests for the MOEA/D, SMS-EMOA, AGE-MOEA, RVEA and SPEA2 grammars against VAMOS.
 
 As for NSGA-II: their real-coded defaults run exactly as VAMOS's own defaults (rule G7), and
 they describe the parameters of VAMOS's tuning spaces, once the studio's changes are undone.
@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 import vamos
 from conftest import make_request, wait_for_end
-from vamos.algorithms import MOEADConfig, SMSEMOAConfig
+from vamos.algorithms import AGEMOEAConfig, MOEADConfig, RVEAConfig, SMSEMOAConfig, SPEA2Config
 from vamos.engine.tuning.racing import bridge_spaces
 from vamos.engine.tuning.racing.param_space import Categorical, Int, Real
 
@@ -18,6 +18,7 @@ from vamos_studio.backend import runs
 from vamos_studio.backend.upstream.vamos_bridge import (
     STUDIO_ONLY_PARAMETERS,
     builtin_space,
+    population,
     to_algorithm_config,
     weight_file,
     weight_population,
@@ -34,7 +35,15 @@ GRAMMAR_ONLY = (
 VAMOS_ONLY = {"use_external_archive", "archive_unbounded", "mutation_eta", "mutation_prob"}
 # VAMOS names that the grammars name as NSGA-II's grammar does (SMS-EMOA's space says "pm").
 VALUE_ALIASES = {"pm": "polynomial"}
-SPACES = [("moead", "real"), ("moead", "binary"), ("smsemoa", "real"), ("smsemoa", "binary")]
+SPACES = [
+    ("moead", "real"),
+    ("moead", "binary"),
+    ("smsemoa", "real"),
+    ("smsemoa", "binary"),
+    ("agemoea", "real"),
+    ("rvea", "real"),
+    ("spea2", "real"),
+]
 
 
 def _front(algorithm: str, config, problem: str, n_obj: int | None = None) -> np.ndarray:
@@ -77,6 +86,42 @@ class TestDefaultConfiguration:
         default = SMSEMOAConfig.default(n_var=selection.n_var)
         assert np.array_equal(front, _front("smsemoa", default, problem))
 
+    @pytest.mark.parametrize("problem", ["zdt1", "zdt4", "dtlz2"])
+    @pytest.mark.parametrize(
+        ("algorithm", "config_class"), [("agemoea", AGEMOEAConfig), ("spea2", SPEA2Config)]
+    )
+    def test_should_run_agemoea_and_spea2_exactly_as_the_vamos_default(
+        self, algorithm, config_class, problem
+    ):
+        # Arrange
+        selection = vamos.make_problem_selection(problem)
+        space = builtin_space(algorithm, "real")
+        config = to_algorithm_config(
+            space.default_configuration(), selection.n_var, selection.n_obj
+        )
+
+        # Act
+        front = _front(algorithm, config, problem)
+
+        # Assert
+        default = config_class.default(n_var=selection.n_var)
+        assert np.array_equal(front, _front(algorithm, default, problem))
+
+    @pytest.mark.parametrize(("problem", "n_obj", "pop_size"), [("dtlz2", 3, 91), ("zdt1", 2, 13)])
+    def test_should_run_rvea_exactly_as_the_vamos_default(self, problem, n_obj, pop_size):
+        # Arrange
+        n_var = vamos.make_problem_selection(problem).n_var
+        space = builtin_space("rvea", "real")
+        config = to_algorithm_config(space.default_configuration(), n_var, n_obj)
+
+        # Act
+        front = _front("rvea", config, problem)
+
+        # Assert
+        default = RVEAConfig.default(pop_size=pop_size, n_var=n_var, n_obj=n_obj)
+        assert config.pop_size == pop_size
+        assert np.array_equal(front, _front("rvea", default, problem))
+
     @pytest.mark.parametrize("algorithm", ["moead", "smsemoa"])
     def test_should_solve_a_binary_problem_with_bits(self, algorithm):
         # Arrange
@@ -100,6 +145,25 @@ class TestDefaultConfiguration:
         # Act / Assert
         with pytest.raises(ValueError, match="number of variables"):
             to_algorithm_config(builtin_space("moead", "real").default_configuration())
+
+
+class TestPopulation:
+    @pytest.mark.parametrize(
+        ("algorithm", "values", "n_obj", "expected"),
+        [
+            ("rvea", {"n_partitions": 12}, 3, 91),
+            ("rvea", {"n_partitions": 12}, 2, 13),
+            ("rvea", {"n_partitions": 4}, 8, 330),
+            ("moead", {"pop_size": 110}, 3, 100),
+            ("moead", {"pop_size": 100}, 6, 100),
+            ("spea2", {"pop_size": 60}, 4, 60),
+        ],
+    )
+    def test_should_give_the_population_a_configuration_runs_with(
+        self, algorithm, values, n_obj, expected
+    ):
+        # Act / Assert
+        assert population(values, algorithm, n_obj) == expected
 
 
 class TestWeightVectors:
@@ -243,3 +307,25 @@ class TestRuns:
         live, result = runs.live_front(run), runs.result_front(run)[0]
         assert live.shape == result.shape
         assert np.allclose(np.sort(live, axis=0), np.sort(result, axis=0), rtol=1e-9)
+
+    def test_should_run_rvea_with_three_objectives_and_its_lattice(self, tmp_path):
+        # Arrange
+        space = builtin_space("rvea", "real")
+        values = space.default_values() | {"external_archive": "unbounded"}
+        request = dataclasses.replace(
+            make_request("dtlz2", 3000),
+            algorithm="rvea",
+            space=space.name,
+            space_hash=space.content_hash(),
+            configuration=dict(space.configuration(values, complete=True).values),
+            n_obj=3,
+        )
+
+        # Act
+        run = runs.launch(request, tmp_path)
+        state = wait_for_end(run)
+
+        # Assert
+        assert state == runs.RunState.FINISHED
+        assert runs.manifest(run)["resolved_spec"]["algorithm"]["config"]["pop_size"] == 91
+        assert len(runs.result_front(run)[0]) <= 91  # the subset of the archive, as the population
