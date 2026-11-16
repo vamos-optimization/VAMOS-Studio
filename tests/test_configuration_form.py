@@ -142,6 +142,7 @@ class TestParallelCoordinates:
         assert [trace.name for trace in figure.data] == ["Reference front", "Front", "Knee"]
         assert {trace.type for trace in figure.data} == {"scattergl"}
         assert list(figure.layout.xaxis.ticktext) == ["f1", "f2", "f3", "f4"]
+        assert figure.layout.xaxis.range[0] < 1 and figure.layout.xaxis.range[1] > 4
 
     def test_should_scale_each_objective_over_the_reference_front(self):
         # Act
