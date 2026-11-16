@@ -34,10 +34,17 @@ def show_front(front: np.ndarray, reference: np.ndarray | None, problem: str) ->
     st.plotly_chart(charts.front_figure(front, reference, chosen), width="stretch")
     if front.shape[1] == 3:
         st.plotly_chart(charts.projections_figure(front, reference, chosen), width="stretch")
+    knee_mark = "red star" if front.shape[1] < charts.PARALLEL_FROM else "red line"
     st.caption(
         f"{len(front)} non-dominated solutions, in blue, over the reference front of {problem}, "
         "in grey; the knee (closest to the ideal point, with each objective scaled over the "
-        "front) is the red star."
+        f"front) is the {knee_mark}."
+        + (
+            " In parallel coordinates: one line per solution, each objective scaled over the "
+            "reference front (above 1, worse than its worst value); hover a line for its values."
+            if front.shape[1] >= charts.PARALLEL_FROM
+            else ""
+        )
     )
     marked = table[table["note"] != ""].drop(columns=["distance"])
     st.dataframe(marked, hide_index=True)
