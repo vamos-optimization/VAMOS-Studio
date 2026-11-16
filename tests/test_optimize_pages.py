@@ -196,6 +196,65 @@ class TestThreeObjectives:
         assert results.dataframe[0].value.columns[:4].tolist() == ["solution", "f1", "f2", "f3"]
 
 
+def choose_dtlz2(app: AppTest, n_obj: int) -> AppTest:
+    """DTLZ2 with `n_obj` objectives in New run."""
+    problem = next(box for box in app.selectbox if box.label == "Problem")
+    problem.select_index(problem.options.index("DTLZ2")).run()
+    checkbox(app, "Set its arguments").check().run()
+    next(box for box in app.selectbox if box.label == "Objectives").select(n_obj).run()
+    return app
+
+
+class TestManyObjectives:
+    def test_should_draw_four_objectives_in_parallel_coordinates(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        app = choose_dtlz2(open_page(NEW_RUN), 4)
+        number_input(app, "Evaluations").set_value(2000).run()
+
+        # Act
+        next(b for b in app.button if b.label == "Launch the run").click().run()
+        run = runs.list_runs(tmp_path)[0]
+        wait_for_end(run)
+        results = open_page(RESULTS)
+
+        # Assert
+        assert runs.read_request(run).n_obj == 4
+        assert not results.exception
+        assert any("and 4 objectives" in c.value for c in results.caption)
+        assert '"type":"scattergl"' in results.get("plotly_chart")[0].proto.spec.replace(" ", "")
+
+    def test_should_build_an_approximate_front_without_an_exact_one(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+
+        # Act
+        app = choose_dtlz2(open_page(NEW_RUN), 5)
+
+        # Assert
+        assert not app.exception
+        assert app.radio(key="new_run.reference_front.dtlz2.14.5").options == [
+            "None (no indicators)"
+        ]
+        assert checkbox(
+            app, "Add this run's solutions to the approximate reference front of this problem"
+        ).value
+
+    def test_should_not_launch_moead_without_weight_vectors(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        app = choose_dtlz2(open_page(NEW_RUN), 6)
+        algorithm = next(box for box in app.selectbox if box.label == "Algorithm")
+
+        # Act
+        algorithm.select_index(algorithm.options.index("MOEA/D")).run()
+
+        # Assert
+        assert not app.exception
+        assert any("MOEA/D cannot run with 6 objectives" in e.value for e in app.error)
+        assert next(b for b in app.button if b.label == "Launch the run").disabled
+
+
 class TestUnboundedArchiveResults:
     def test_should_show_the_subset_and_toggle_the_whole_archive(self, tmp_path, monkeypatch):
         # Arrange
