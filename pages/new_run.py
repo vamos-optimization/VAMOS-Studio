@@ -20,16 +20,11 @@ from vamos_studio.backend.catalogue import (
     reference_front_source,
 )
 from vamos_studio.backend.upstream.parameter_space import Parameter, ParameterSpace
-from vamos_studio.backend.upstream.vamos_bridge import (
-    builtin_space,
-    population,
-    weight_file,
-    weight_population,
-    weight_populations,
-)
+from vamos_studio.backend.upstream.vamos_bridge import builtin_space, population
 from vamos_studio.configuration_form import active_fields, changes, configuration_of
 from vamos_studio.live_view import estimated_generations, pause_overhead
 from vamos_studio.parameter_tree import format_value
+from vamos_studio.population_notes import objective_notes, population_notes
 from vamos_studio.problem_form import render_problem_arguments
 
 DEFAULT_EVALUATIONS = 25000
@@ -181,31 +176,10 @@ space = builtin_space(algorithm.key, problem.encoding)
 st.subheader("3. Configuration")
 configuration = render_configuration(space)
 
-launchable = True
-if algorithm.key == "moead" and details.n_obj >= 3 and not weight_populations(details.n_obj):
-    launchable = False
-    st.error(
-        f"MOEA/D cannot run with {details.n_obj} objectives: neither jMetal nor VAMOS has a weight "
-        f"vector file for them. Choose another number of objectives or another algorithm."
-    )
-elif algorithm.key == "moead" and details.n_obj >= 3:
-    asked = int(configuration.values["pop_size"])
-    moead_population = weight_population(asked, details.n_obj)
-    sizes = ", ".join(str(size) for size in weight_populations(details.n_obj))
-    st.caption(
-        f"MOEA/D reads its {moead_population} weight vectors from "
-        f"{weight_file(asked, details.n_obj)}, jMetal's file shipped with VAMOS, as jMetal and "
-        "Evolver do"
-        + ("." if moead_population == asked else f": there is none for {asked}.")
-        + f" Populations with a file for {details.n_obj} objectives: {sizes}."
-    )
-elif algorithm.key == "rvea":
-    st.caption(
-        f"RVEA runs with "
-        f"{population(configuration.values, 'rvea', details.n_obj):,} solutions, one per "
-        f"reference vector: the Das-Dennis lattice of {configuration.values['n_partitions']} "
-        f"divisions for {details.n_obj} objectives."
-    )
+for level, text in population_notes(
+    algorithm.key, configuration.values, details.n_obj
+) + objective_notes(algorithm.key, details.n_obj):
+    {"caption": st.caption, "info": st.info, "warning": st.warning}[level](text)
 
 st.subheader("4. Budget")
 left, right = st.columns(2)
@@ -279,14 +253,14 @@ def render_live_view(max_evaluations: int, values: dict, pop_size: int) -> tuple
 pause_seconds, pause_every = render_live_view(
     int(max_evaluations),
     dict(configuration.values),
-    population(configuration.values, algorithm.key, details.n_obj) if launchable else 1,
+    population(configuration.values, algorithm.key, details.n_obj),
 )
 
 if st.button(
     "Launch the run",
     type="primary",
     icon=":material/play_arrow:",
-    disabled=not (valid_problem and launchable),
+    disabled=not valid_problem,
     help=None if valid_problem else "Fix the problem's arguments first.",
 ):
     request = runs.SolveRequest(

@@ -155,7 +155,7 @@ class TestPopulation:
             ("rvea", {"n_partitions": 12}, 2, 13),
             ("rvea", {"n_partitions": 4}, 8, 330),
             ("moead", {"pop_size": 110}, 3, 100),
-            ("moead", {"pop_size": 100}, 6, 100),
+            ("moead", {"pop_size": 100}, 6, 56),
             ("spea2", {"pop_size": 60}, 4, 60),
         ],
     )

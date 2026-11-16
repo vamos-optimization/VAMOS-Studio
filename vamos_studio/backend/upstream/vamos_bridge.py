@@ -146,7 +146,7 @@ def population(values: Mapping[str, Any], algorithm: str, n_obj: int) -> int:
     if algorithm == "rvea":
         return math.comb(int(values["n_partitions"]) + n_obj - 1, n_obj - 1)
     pop_size = int(values["pop_size"])
-    if algorithm == "moead" and weight_populations(n_obj if n_obj >= 3 else 3):
+    if algorithm == "moead":
         return weight_population(pop_size, n_obj)
     return pop_size
 
@@ -177,32 +177,51 @@ def weight_populations(n_obj: int) -> tuple[int, ...]:
     return tuple(sorted(sizes))
 
 
+def lattice(pop_size: int, n_obj: int) -> tuple[int, int]:
+    """The largest Das-Dennis lattice with at most `pop_size` vectors: (divisions, vectors).
+
+    With fewer solutions than objectives, the lattice of one division (`n_obj` vectors).
+    """
+    divisions = 1
+    while math.comb(divisions + 1 + n_obj - 1, n_obj - 1) <= pop_size:
+        divisions += 1
+    return divisions, math.comb(divisions + n_obj - 1, n_obj - 1)
+
+
 def weight_population(pop_size: int, n_obj: int) -> int:
     """MOEA/D's population for `pop_size`: one with a weight vector file, as in jMetal.
 
     With two objectives the weights are uniform and any size works. With more, the size has a
-    file if there is one; otherwise the largest size with a file up to it, or the smallest.
+    file if there is one; otherwise the largest size with a file up to it, or the smallest. Without
+    any file for `n_obj` objectives, the size of the largest Das-Dennis lattice up to `pop_size`.
     """
     if n_obj < 3:
         return pop_size
     sizes = weight_populations(n_obj)
     if not sizes:
-        raise ValueError(f"VAMOS ships no weight vector file for {n_obj} objectives.")
+        return lattice(pop_size, n_obj)[1]
     fitting = [size for size in sizes if size <= pop_size]
     return fitting[-1] if fitting else sizes[0]
 
 
 def weight_file(pop_size: int, n_obj: int) -> str | None:
-    """The weight vector file MOEA/D reads for a population, or None with two objectives."""
-    if n_obj < 3:
+    """The weight vector file MOEA/D reads for a population, or None (two objectives, or none)."""
+    if n_obj < 3 or not weight_populations(n_obj):
         return None
     return f"W{n_obj}D_{weight_population(pop_size, n_obj)}.dat"
 
 
 def with_weight_files(config: Any, n_obj: int) -> Any:
-    """MOEA/D's configuration reading jMetal's weight files, with three or more objectives."""
+    """MOEA/D's weight vectors with three or more objectives: jMetal's file, or else a lattice.
+
+    The lattice is VAMOS's Das-Dennis lattice of exactly the configuration's population, which
+    `weight_population` has made the size of one.
+    """
     if n_obj < 3:
         return config
+    if not weight_populations(n_obj):
+        divisions = lattice(int(config.pop_size), n_obj)[0]
+        return dataclasses.replace(config, weight_vectors={"path": None, "divisions": divisions})
     path = str(weights_directory())
     return dataclasses.replace(config, weight_vectors={"path": path, "divisions": None})
 
