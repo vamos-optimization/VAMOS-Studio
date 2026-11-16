@@ -28,7 +28,7 @@ class TestAlgorithms:
             "top",
         }
 
-    def test_should_make_nsgaii_moead_and_smsemoa_available_for_real_and_binary_problems(self):
+    def test_should_make_the_algorithms_with_a_grammar_available(self):
         # Act
         available = {
             entry.key: entry.encodings for entry in catalogue.algorithm_entries() if entry.available
@@ -39,6 +39,9 @@ class TestAlgorithms:
             "nsgaii": ("real", "binary"),
             "moead": ("real", "binary"),
             "smsemoa": ("real", "binary"),
+            "agemoea": ("real",),
+            "rvea": ("real",),
+            "spea2": ("real",),
         }
 
 

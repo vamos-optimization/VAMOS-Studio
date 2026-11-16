@@ -21,7 +21,7 @@ class TestAlgorithmsPage:
     ):
         # Assert
         algorithm, encoding = algorithms_app.selectbox
-        assert algorithm.options == ["MOEA/D", "NSGA-II", "SMS-EMOA"]
+        assert algorithm.options == ["AGE-MOEA", "MOEA/D", "NSGA-II", "RVEA", "SMS-EMOA", "SPEA2"]
         assert algorithm.value.label == "NSGA-II"
         assert encoding.options == ["Real", "Binary"]
 

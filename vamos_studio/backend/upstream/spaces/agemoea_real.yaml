@@ -1,0 +1,234 @@
+# AGE-MOEA for real-coded problems, as a grammar (docs/design/parameter-spaces.md).
+#
+# Built from VAMOS 1.2.1's tuning space (build_agemoea_config_space) with these changes:
+# - M1: use_external_archive / archive_unbounded / archive_prune_policy become the categorical
+#   external_archive: none | unbounded | bounded(archive_prune_policy).
+# - M2: mutation_eta, shared by polynomial (pm in VAMOS's space) and linked_polynomial, becomes
+#   polynomial_eta and linked_polynomial_eta.
+# - M8: mutation_prob, an absolute probability whose VAMOS default is 1/n, becomes
+#   mutation_prob_factor (probability = factor / number of variables), as in NSGA-II: the studio
+#   converts it with the problem's variables (vamos_bridge.to_algorithm_config).
+# - M5: operator rates are global sub-parameters of their operator.
+# The defaults run exactly as AGEMOEAConfig.default() (checked by tests/test_more_grammars.py):
+# SBX with distribution index 15.
+# - archive_subset_selection is not in VAMOS: the studio selects the result from an unbounded
+#   archive with VAMOS's subset-selection functions (see vamos_studio/backend/subset.py).
+# A drift-detection test checks this file against VAMOS's space.
+schema: vamos.parameter-space
+schema_version: 1.0.0
+name: agemoea_real
+algorithm: agemoea
+encoding: real
+description: AGE-MOEA for real-coded problems.
+parameters:
+  pop_size:
+    type: int
+    default: 100
+    range: [20, 200]
+    log: true
+    role: population
+    label: Population size
+    description: Number of solutions in the population.
+  external_archive:
+    type: categorical
+    default: none
+    role: adaptive
+    label: External archive
+    description: Whether non-dominated solutions are kept in an archive besides the population; a bounded archive is as large as the population, and from an unbounded one the result keeps as many solutions as the population.
+    values:
+      none: {}
+      unbounded:
+        conditional_parameters:
+          archive_subset_selection:
+            type: categorical
+            default: farthest
+            values: [farthest, crowding, hv_greedy, kmeans, none]
+            role: structural
+            label: Subset selection
+            description: How the run's result is chosen from the unbounded archive, as many solutions as the population; none returns the whole archive.
+      bounded:
+        conditional_parameters:
+          archive_prune_policy:
+            type: categorical
+            default: crowding
+            values: [crowding, hv, mc_hv, knn, maxmin, ref_dirs]
+            role: adaptive
+            label: Pruning policy
+            description: How a full archive, as large as the population, discards solutions.
+  initializer:
+    type: categorical
+    default: random
+    role: structural
+    label: Initialization
+    description: How the initial population is created.
+    values:
+      random: {}
+      lhs: {}
+      scatter:
+        conditional_parameters:
+          scatter_base_size_factor:
+            type: categorical
+            default: 0.2  # PROVISIONAL: VAMOS uses 0.25, which is not one of the choices.
+            values: [0.1, 0.2, 0.3, 0.5, 0.75, 1.0]
+            role: structural
+            label: Base size factor
+            description: Size of the scatter-search base set, as a fraction of the population.
+  crossover:
+    type: categorical
+    default: sbx
+    role: operator
+    label: Crossover
+    description: The crossover operator.
+    global_sub_parameters:
+      crossover_prob:
+        type: real
+        default: 0.9
+        range: [0.6, 1.0]
+        role: operator_rate
+        label: Crossover probability
+        description: Probability of applying the crossover to a pair of parents.
+    values:
+      sbx:
+        conditional_parameters:
+          crossover_eta:
+            type: real
+            default: 15.0
+            range: [5.0, 40.0]
+            role: operator_rate
+            label: Distribution index
+            description: SBX distribution index; larger values give offspring closer to parents.
+      blx_alpha:
+        conditional_parameters:
+          crossover_alpha:
+            type: real
+            default: 0.5
+            range: [0.0, 1.0]
+            role: operator_rate
+            label: Alpha
+            description: BLX-alpha extension of the interval between the parents.
+          blx_repair:
+            type: categorical
+            default: clip
+            values: [clip, random, reflect, round]
+            role: structural
+            label: BLX repair
+            description: How BLX-alpha offspring outside the bounds are brought back.
+      arithmetic: {}
+      pcx:
+        conditional_parameters:
+          pcx_sigma_eta:
+            type: real
+            default: 0.1
+            range: [0.01, 0.5]
+            role: operator_rate
+            label: Sigma eta
+            description: Spread along the direction from the centroid to the parent.
+          pcx_sigma_zeta:
+            type: real
+            default: 0.1
+            range: [0.01, 0.5]
+            role: operator_rate
+            label: Sigma zeta
+            description: Spread across the other directions.
+      undx:
+        conditional_parameters:
+          undx_zeta:
+            type: real
+            default: 0.5
+            range: [0.1, 1.0]
+            role: operator_rate
+            label: Zeta
+            description: Spread along the line between the first two parents.
+          undx_eta:
+            type: real
+            default: 0.35
+            range: [0.1, 1.0]
+            role: operator_rate
+            label: Eta
+            description: Spread orthogonal to that line.
+      simplex:
+        conditional_parameters:
+          simplex_epsilon:
+            type: real
+            default: 2.0  # VAMOS's sqrt(k + 1) for its k = 3 parents.
+            range: [1.0, 3.0]
+            role: operator_rate
+            label: Expansion
+            description: Expansion rate of the simplex around the parents' centroid.
+  mutation:
+    type: categorical
+    default: polynomial
+    role: operator
+    label: Mutation
+    description: The mutation operator.
+    global_sub_parameters:
+      mutation_prob_factor:
+        type: real
+        default: 1.0
+        range: [0.25, 3.0]
+        role: operator_rate
+        label: Mutation probability factor
+        description: The probability of mutating each variable is this factor divided by their number.
+    values:
+      polynomial:
+        conditional_parameters:
+          polynomial_eta:
+            type: real
+            default: 20.0
+            range: [5.0, 40.0]
+            role: operator_rate
+            label: Distribution index
+            description: Polynomial mutation distribution index; larger values give smaller steps.
+      linked_polynomial:
+        conditional_parameters:
+          linked_polynomial_eta:
+            type: real
+            default: 20.0
+            range: [5.0, 40.0]
+            role: operator_rate
+            label: Distribution index
+            description: Distribution index of the linked polynomial mutation.
+      uniform_reset: {}
+      non_uniform:
+        conditional_parameters:
+          nonuniform_perturbation:
+            type: real
+            default: 0.5
+            range: [0.05, 0.5]
+            role: operator_rate
+            label: Perturbation
+            description: Size of the non-uniform mutation steps, which shrink over the run.
+      gaussian:
+        conditional_parameters:
+          gaussian_sigma:
+            type: real
+            default: 0.1  # PROVISIONAL: the VAMOS operator has no default sigma.
+            range: [0.001, 0.5]
+            role: operator_rate
+            label: Sigma
+            description: Standard deviation of the Gaussian steps, relative to the variable range.
+      cauchy:
+        conditional_parameters:
+          cauchy_gamma:
+            type: real
+            default: 0.1
+            range: [0.001, 0.5]
+            role: operator_rate
+            label: Gamma
+            description: Scale of the Cauchy steps.
+      uniform:
+        conditional_parameters:
+          uniform_perturb:
+            type: real
+            default: 0.1
+            range: [0.01, 0.5]
+            role: operator_rate
+            label: Perturbation
+            description: Maximum size of the uniform steps, relative to the variable range.
+  repair:
+    type: categorical
+    default: clip
+    values: [clip, reflect, random, round]
+    role: structural
+    label: Repair
+    description: How variables that leave their bounds are brought back.

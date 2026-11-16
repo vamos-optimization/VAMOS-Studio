@@ -31,7 +31,7 @@ from .runs import (
     run_arguments,
     write_json,
 )
-from .upstream.vamos_bridge import builtin_space, to_algorithm_config
+from .upstream.vamos_bridge import builtin_space, population, to_algorithm_config
 
 # The live front and status are rewritten at most this often, plus once at the end.
 MIN_WRITE_INTERVAL_SECONDS: Final = 0.5
@@ -222,7 +222,7 @@ def solve(request: SolveRequest, progress: FileProgress) -> Any:
         progress.live_source = "archive"
         if subset.method_of(request.configuration) is not None:
             progress.live_source = "archive_subset"
-            progress.subset_size = int(request.configuration["pop_size"])
+            progress.subset_size = int(config.pop_size)
     return vamos.optimize(
         problem_to_solve(request),
         algorithm=request.algorithm,
@@ -249,7 +249,7 @@ def save_selection(directory: Path, request: SolveRequest, result: Any) -> np.nd
     if method is None:
         return None
     front = np.asarray(result.front(), dtype=float)
-    size = int(request.configuration["pop_size"])
+    size = population(request.configuration, request.algorithm, run_arguments(request)["n_obj"])
     kept = subset.select(method, front, size)
     write_json(
         directory / SELECTION_FILE,

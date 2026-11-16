@@ -22,7 +22,9 @@ algorithms need more than that:
 from __future__ import annotations
 
 import dataclasses
+import math
 import re
+from collections.abc import Mapping
 from functools import cache
 from importlib.resources import files
 from pathlib import Path
@@ -50,7 +52,13 @@ BUILTIN_SPACES: Final = (
     ("moead", "binary"),
     ("smsemoa", "real"),
     ("smsemoa", "binary"),
+    ("agemoea", "real"),
+    ("rvea", "real"),
+    ("spea2", "real"),
 )
+# Algorithms whose grammar gives the mutation probability as a factor of 1/n (M8) and whose VAMOS
+# space names polynomial mutation "pm": VAMOS builds them from the converted assignment.
+_FACTOR_ALGORITHMS: Final = frozenset({"agemoea", "rvea", "spea2"})
 
 # Parameters of the grammars that VAMOS does not have: the studio applies them itself.
 STUDIO_ONLY_PARAMETERS: Final = frozenset({"archive_subset_selection"})
@@ -120,7 +128,27 @@ def to_algorithm_config(
         return with_weight_files(config_from_assignment(vamos_space, assignment), n_obj or 2)
     if space.algorithm == "smsemoa":
         return smsemoa_config(assignment, n_var)
+    if space.algorithm in _FACTOR_ALGORITHMS:
+        assignment["mutation_prob"] = mutation_probability(assignment, n_var)
+        if assignment.get("mutation") == "polynomial":
+            assignment["mutation"] = "pm"
+        if space.algorithm == "rvea":
+            assignment["n_obj"] = n_obj or 2  # its population is the lattice for these objectives
     return config_from_assignment(vamos_space, assignment)
+
+
+def population(values: Mapping[str, Any], algorithm: str, n_obj: int) -> int:
+    """The population a configuration runs with on a problem of `n_obj` objectives.
+
+    RVEA's is its Das-Dennis lattice of `n_partitions` divisions; MOEA/D's, with three or more
+    objectives, one with a weight vector file (see `weight_population`); the others', `pop_size`.
+    """
+    if algorithm == "rvea":
+        return math.comb(int(values["n_partitions"]) + n_obj - 1, n_obj - 1)
+    pop_size = int(values["pop_size"])
+    if algorithm == "moead" and weight_populations(n_obj if n_obj >= 3 else 3):
+        return weight_population(pop_size, n_obj)
+    return pop_size
 
 
 def mutation_probability(assignment: dict[str, Any], n_var: int | None) -> float:

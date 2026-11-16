@@ -22,6 +22,7 @@ from vamos_studio.backend.catalogue import (
 from vamos_studio.backend.upstream.parameter_space import Parameter, ParameterSpace
 from vamos_studio.backend.upstream.vamos_bridge import (
     builtin_space,
+    population,
     weight_file,
     weight_population,
     weight_populations,
@@ -189,13 +190,21 @@ if algorithm.key == "moead" and details.n_obj >= 3 and not weight_populations(de
     )
 elif algorithm.key == "moead" and details.n_obj >= 3:
     asked = int(configuration.values["pop_size"])
-    population = weight_population(asked, details.n_obj)
+    moead_population = weight_population(asked, details.n_obj)
     sizes = ", ".join(str(size) for size in weight_populations(details.n_obj))
     st.caption(
-        f"MOEA/D reads its {population} weight vectors from {weight_file(asked, details.n_obj)}, "
-        f"jMetal's file shipped with VAMOS, as jMetal and Evolver do"
-        + ("." if population == asked else f": there is none for {asked}.")
+        f"MOEA/D reads its {moead_population} weight vectors from "
+        f"{weight_file(asked, details.n_obj)}, jMetal's file shipped with VAMOS, as jMetal and "
+        "Evolver do"
+        + ("." if moead_population == asked else f": there is none for {asked}.")
         + f" Populations with a file for {details.n_obj} objectives: {sizes}."
+    )
+elif algorithm.key == "rvea":
+    st.caption(
+        f"RVEA runs with "
+        f"{population(configuration.values, 'rvea', details.n_obj):,} solutions, one per "
+        f"reference vector: the Das-Dennis lattice of {configuration.values['n_partitions']} "
+        f"divisions for {details.n_obj} objectives."
     )
 
 st.subheader("4. Budget")
@@ -231,7 +240,7 @@ if count > 1:
     st.caption(f"Seeds {int(seed)} to {int(seed) + count - 1}, {parallel} at a time.")
 
 
-def render_live_view(max_evaluations: int, values: dict) -> tuple[float, int]:
+def render_live_view(max_evaluations: int, values: dict, pop_size: int) -> tuple[float, int]:
     """The pauses that let the Monitor show the front converge; (0, 1) runs at full speed."""
     with st.expander("Live view"):
         slow = st.checkbox(
@@ -260,14 +269,18 @@ def render_live_view(max_evaluations: int, values: dict) -> tuple[float, int]:
         if not slow:
             return 0.0, 1
         generations = estimated_generations(
-            max_evaluations, int(values["pop_size"]), float(values["offspring_ratio"])
+            max_evaluations, pop_size, float(values.get("offspring_ratio", 1.0))
         )
         added = pause_overhead(generations, float(pause_seconds), int(pause_every))
         st.caption(f"About {generations:,} generations: the pauses add about {added:.0f} s.")
         return float(pause_seconds), int(pause_every)
 
 
-pause_seconds, pause_every = render_live_view(int(max_evaluations), dict(configuration.values))
+pause_seconds, pause_every = render_live_view(
+    int(max_evaluations),
+    dict(configuration.values),
+    population(configuration.values, algorithm.key, details.n_obj) if launchable else 1,
+)
 
 if st.button(
     "Launch the run",
