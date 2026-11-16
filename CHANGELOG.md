@@ -70,14 +70,22 @@ Works with VAMOS 1.2 (1.2.1 or later).
   front and builds an approximate one by default. With four or more objectives every front is drawn
   in parallel coordinates (Results, Monitor, series, Explore › Problems and the home page): one line
   per solution across one axis per objective, each scaled over the reference front, with the values
-  on hover. MOEA/D needs a weight vector file for its number of objectives (none exists for six):
-  without one, New run says so and does not launch it.
+  on hover. MOEA/D reads jMetal's weight vector file for its number of objectives when there is one,
+  and otherwise a Das-Dennis lattice (see NSGA-III below).
 - **AGE-MOEA, RVEA and SPEA2** for real-coded problems: their grammars (`agemoea_real`, `rvea_real`,
   `spea2_real`), built from VAMOS's tuning spaces with the same changes as SMS-EMOA's (external
   archive, a distribution index per polynomial mutation, the mutation probability as a factor of
   1/n), whose defaults run exactly as VAMOS's. RVEA has no population of its own: it is the
   Das-Dennis lattice of its divisions for the problem's objectives (13 with two, 91 with three, by
   default), and New run shows it.
+- **NSGA-III** for real-coded problems (`nsgaiii_real`), whose default runs exactly as VAMOS's: SBX
+  with distribution index 30, a tournament (VAMOS's NSGA-III selects only by tournament) and the
+  largest Das-Dennis lattice of reference directions that fits the population. New run says how many
+  directions it uses, how many solutions RVEA runs with (warning when they are fewer than 50 or more
+  than 1,000) and which weight vectors MOEA/D reads; without a jMetal weight file for its number of
+  objectives (six, seven, nine…), MOEA/D runs on VAMOS's largest Das-Dennis lattice that fits the
+  population instead of being refused. With four or more objectives New run warns that NSGA-II and
+  SPEA2 lose selection pressure and that SMS-EMOA can be very slow.
 - **Quality indicators on request**: Results, the aggregate of a series and, with four or more
   objectives, the indicator sandbox compute them when asked, with a warning from five objectives
   that the hypervolume may take long; values computed are kept while the session lasts. The home
