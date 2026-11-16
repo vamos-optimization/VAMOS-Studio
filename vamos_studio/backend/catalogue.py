@@ -56,9 +56,11 @@ SUPPORTED_PROBLEM_FAMILIES: Final = {
     "bin_qubo": ("binary",),
     "bin_feat": ("binary",),
 }
-# Numbers of objectives the studio offers for problems that let you choose: those of the reference
-# fronts it copies from jMetal, and those its charts draw (2D and 3D).
-SUPPORTED_N_OBJ: Final = (2, 3)
+# Numbers of objectives the studio offers for problems that let you choose. Those without a
+# reference front copied from jMetal (DTLZ1-4 and DTLZ7 have 2, 3, 4, 6 and 8; DTLZ5 and DTLZ6, 2
+# and 3) are measured against an approximate front built from runs. With four or more objectives,
+# charts draw parallel coordinates.
+SUPPORTED_N_OBJ: Final = tuple(range(2, 21))
 FAMILY_LABELS: Final = {
     "zdt": "ZDT",
     "dtlz": "DTLZ",

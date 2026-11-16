@@ -58,11 +58,13 @@ problems = [
 ]
 controls = st.columns([3, 1, 2, 2])
 problem = controls[0].selectbox("Problem", problems, format_func=lambda item: item.label)
+# Only numbers of objectives with a reference front.
+n_obj_options = [n for n in problem.n_obj_options if reference_front(problem.key, n) is not None]
 n_obj = controls[1].selectbox(
     "Objectives",
-    problem.n_obj_options,
-    index=problem.n_obj_options.index(problem.n_obj),
-    disabled=len(problem.n_obj_options) == 1,
+    n_obj_options,
+    index=n_obj_options.index(problem.n_obj),
+    disabled=len(n_obj_options) == 1,
 )
 n_points = controls[2].slider("Points", min_value=2, max_value=200, value=20)
 shift = controls[3].slider(

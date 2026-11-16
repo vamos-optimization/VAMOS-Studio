@@ -77,7 +77,8 @@ def _render_argument(entry: ProblemEntry, argument: ProblemArgument, column, pre
             on_change=_follow_objectives,
             args=(entry.key, key, f"{prefix}.n_var"),
             help=help_text + " Changing it sets the variables to the standard number for it. "
-            "The studio offers those it has reference fronts and charts for.",
+            "With four or more, fronts are drawn in parallel coordinates; without an exact "
+            "reference front, runs can build an approximate one.",
         )
     if argument.type == "boolean":
         return column.checkbox(

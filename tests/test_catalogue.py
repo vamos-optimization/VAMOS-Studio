@@ -60,9 +60,9 @@ class TestProblems:
             f"dtlz{number}" for number in range(1, 8)
         } | {"bin_knapsack", "bin_qubo", "bin_feat"}
 
-    def test_should_offer_two_or_three_objectives_for_dtlz_only(self):
+    def test_should_offer_two_to_twenty_objectives_for_dtlz_only(self):
         # Act / Assert
-        assert catalogue.problem_entry("dtlz2").n_obj_options == (2, 3)
+        assert catalogue.problem_entry("dtlz2").n_obj_options == tuple(range(2, 21))
         assert catalogue.problem_entry("zdt1").n_obj_options == (2,)
 
     @pytest.mark.parametrize(("n_obj", "n_var"), [(2, 11), (3, 12)])
@@ -77,7 +77,7 @@ class TestProblems:
     def test_should_refuse_a_number_of_objectives_it_does_not_offer(self):
         # Act / Assert
         with pytest.raises(ValueError):
-            catalogue.problem_details("dtlz2", 5)
+            catalogue.problem_details("dtlz2", 21)
 
     def test_should_list_zdt5_as_binary_and_available(self):
         # Act
@@ -209,7 +209,8 @@ class TestProblemArguments:
             ("zdt1", {"n_var": 1}, False),
             ("dtlz2", {"n_var": 3, "n_obj": 3}, True),
             ("dtlz2", {"n_var": 2, "n_obj": 3}, False),
-            ("dtlz2", {"n_var": 12, "n_obj": 5}, False),
+            ("dtlz2", {"n_var": 14, "n_obj": 5}, True),
+            ("dtlz2", {"n_var": 30, "n_obj": 21}, False),
         ],
     )
     def test_should_check_the_arguments(self, key, arguments, valid):
