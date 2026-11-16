@@ -277,7 +277,13 @@ def parallel_figure(
             figure.add_trace(_parallel_trace(points, low, span, name, colour, width, hover=True))
     names = [f"f{index + 1}" for index in range(n_obj)]
     figure.update_layout(
-        xaxis={"tickmode": "array", "tickvals": list(range(1, n_obj + 1)), "ticktext": names},
+        xaxis={
+            "tickmode": "array",
+            "tickvals": list(range(1, n_obj + 1)),
+            "ticktext": names,
+            # A margin on both sides, so that the labels of the first and last axes show.
+            "range": [0.7, n_obj + 0.3],
+        },
         yaxis={"title": "Scaled value", "zeroline": False},
         legend={"orientation": "h", "y": -0.15},
         margin={"t": 20},
