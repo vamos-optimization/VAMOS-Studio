@@ -180,7 +180,14 @@ space = builtin_space(algorithm.key, problem.encoding)
 st.subheader("3. Configuration")
 configuration = render_configuration(space)
 
-if algorithm.key == "moead" and details.n_obj >= 3:
+launchable = True
+if algorithm.key == "moead" and details.n_obj >= 3 and not weight_populations(details.n_obj):
+    launchable = False
+    st.error(
+        f"MOEA/D cannot run with {details.n_obj} objectives: neither jMetal nor VAMOS has a weight "
+        f"vector file for them. Choose another number of objectives or another algorithm."
+    )
+elif algorithm.key == "moead" and details.n_obj >= 3:
     asked = int(configuration.values["pop_size"])
     population = weight_population(asked, details.n_obj)
     sizes = ", ".join(str(size) for size in weight_populations(details.n_obj))
@@ -266,7 +273,7 @@ if st.button(
     "Launch the run",
     type="primary",
     icon=":material/play_arrow:",
-    disabled=not valid_problem,
+    disabled=not (valid_problem and launchable),
     help=None if valid_problem else "Fix the problem's arguments first.",
 ):
     request = runs.SolveRequest(
