@@ -42,6 +42,7 @@ class TestAlgorithms:
             "agemoea": ("real",),
             "rvea": ("real",),
             "spea2": ("real",),
+            "nsgaiii": ("real",),
         }
 
 

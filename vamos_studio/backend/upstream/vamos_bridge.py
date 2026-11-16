@@ -55,10 +55,11 @@ BUILTIN_SPACES: Final = (
     ("agemoea", "real"),
     ("rvea", "real"),
     ("spea2", "real"),
+    ("nsgaiii", "real"),
 )
 # Algorithms whose grammar gives the mutation probability as a factor of 1/n (M8) and whose VAMOS
 # space names polynomial mutation "pm": VAMOS builds them from the converted assignment.
-_FACTOR_ALGORITHMS: Final = frozenset({"agemoea", "rvea", "spea2"})
+_FACTOR_ALGORITHMS: Final = frozenset({"agemoea", "rvea", "spea2", "nsgaiii"})
 
 # Parameters of the grammars that VAMOS does not have: the studio applies them itself.
 STUDIO_ONLY_PARAMETERS: Final = frozenset({"archive_subset_selection"})
