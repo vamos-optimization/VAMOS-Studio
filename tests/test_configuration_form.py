@@ -131,6 +131,45 @@ class TestSeriesLiveFigure:
         assert [trace.type for trace in figure.data] == ["scatter3d"]
 
 
+class TestParallelCoordinates:
+    FRONT = np.array([[0.0, 0.5, 1.0, 2.0], [1.0, 0.5, 0.0, 4.0]])
+
+    def test_should_draw_four_objectives_as_lines_with_the_knee_on_top(self):
+        # Act
+        figure = charts.front_figure(self.FRONT, self.FRONT, highlighted=1)
+
+        # Assert
+        assert [trace.name for trace in figure.data] == ["Reference front", "Front", "Knee"]
+        assert {trace.type for trace in figure.data} == {"scattergl"}
+        assert list(figure.layout.xaxis.ticktext) == ["f1", "f2", "f3", "f4"]
+
+    def test_should_scale_each_objective_over_the_reference_front(self):
+        # Act
+        line = charts.front_figure(self.FRONT * 2, self.FRONT).data[1]
+
+        # Assert: one line per solution, separated by a gap, with the values before scaling
+        assert np.allclose(line.y[:4], [0.0, 0.5, 2.0, 1.0])
+        assert np.isnan(line.y[4])
+        assert np.allclose(line.customdata[:4], [0.0, 1.0, 2.0, 4.0])
+
+    def test_should_draw_only_a_sample_of_a_large_reference_front(self):
+        # Arrange
+        reference = np.random.default_rng(1).random((5000, 6))
+
+        # Act
+        trace = charts.front_figure(None, reference).data[0]
+
+        # Assert
+        assert len(trace.x) // 7 <= charts.MAX_PARALLEL_REFERENCE_LINES
+
+    def test_should_draw_a_series_in_parallel_coordinates(self):
+        # Act
+        figure = charts.series_figure([self.FRONT, self.FRONT], self.FRONT)
+
+        # Assert
+        assert [trace.name for trace in figure.data] == ["Runs", "Union of the runs"]
+
+
 class TestFrontFigure3D:
     FRONT = np.array([[0.0, 0.5, 0.5], [0.5, 0.0, 0.5], [0.5, 0.5, 0.0]])
 
