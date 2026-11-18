@@ -2,7 +2,7 @@
 
 Adapted from Evolver-Studio's tutorial of the same name
 (evolver_studio/tutorial_parameter_spaces.py), the interactive counterpart of Evolver's tutorial
-E1: the same concepts, on the studio's grammar of
+E1: the same concepts, on VAMOS's grammar of
 NSGA-II for real-coded problems (docs/design/parameter-spaces.md), read as Explore › Algorithms
 shows it. It runs nothing; the companion notebook builds the same configurations with VAMOS's
 configuration builders and runs them.
@@ -40,9 +40,10 @@ def _render_introduction() -> None:
         "A **parameter space** describes all those choices: every parameter, its type and range, "
         "its default value, and **which parameters depend on which**. Choosing a value for every "
         "parameter that applies gives a **configuration**, a concrete variant of the algorithm "
-        "that can be run. The studio's spaces follow the model of Evolver, a framework of the "
-        "same authors: a *grammar*, in which a categorical parameter chooses a value and each "
-        "value brings its own parameters.\n\n"
+        "that can be run. VAMOS ships a space for every algorithm, on the model of Evolver, a "
+        "framework of the same authors: a *grammar*, in which a categorical parameter chooses a "
+        "value and each value brings its own parameters, with Evolver's names for them. The "
+        "studio's forms are those grammars, with the population size added.\n\n"
         "In this tutorial you will read the parameter space of NSGA-II, see which parameters "
         "each choice activates, write a configuration as a command line, and compare the spaces "
         "of the other algorithms."
@@ -67,8 +68,9 @@ def _render_tree() -> None:
         st.markdown(tree_markdown(space))
     st.markdown(
         "For instance, **crossover** chooses one of several operators, and each one has its own "
-        "settings: `crossover_eta` belongs to SBX, `crossover_alpha` to BLX-α. A parameter such "
-        "as `crossover_prob`, shared by every crossover, is a *global* sub-parameter of "
+        "settings: `sbx_distribution_index` belongs to SBX, `crossover_alpha` to BLX-α. A "
+        "parameter such as `crossover_probability`, shared by every crossover, is a *global* "
+        "sub-parameter of "
         "crossover. Explore › Algorithms shows this tree for every algorithm and encoding, with "
         "a table of the parameters and the grammar as YAML."
     )
@@ -179,8 +181,8 @@ def _render_other_spaces() -> None:
     st.markdown(
         "They share most operators, but each one has its own parameters: **MOEA/D** its "
         "neighborhood and aggregation function, **SMS-EMOA** the reference point of its "
-        "hypervolume, **RVEA** the divisions of its reference vectors instead of a population "
-        "size, **SPEA2** its archive and density estimator. A **binary** space has other "
+        "hypervolume, **RVEA** the adaptation of its reference vectors, **SPEA2** its archive and "
+        "density estimator. A **binary** space has other "
         "operators altogether (bit-flip mutation, HUX or uniform crossover). The default "
         "configuration of each one runs exactly as VAMOS's default, which tests check for every "
         "space."

@@ -30,21 +30,25 @@ class TestTreeMarkdown:
 
         # Assert
         sbx = lines.index("    - `sbx`")
-        assert lines[sbx + 1].startswith("        - **Distribution index** `crossover_eta`")
+        assert lines[sbx + 1].startswith(
+            "        - **Distribution index** `sbx_distribution_index`"
+        )
 
     def test_should_list_global_sub_parameters_under_any_value(self, space):
         # Act
         text = tree_markdown(space)
 
         # Assert
-        assert "    - *any value*\n        - **Crossover probability** `crossover_prob`" in text
+        assert (
+            "    - *any value*\n        - **Crossover probability** `crossover_probability`" in text
+        )
 
     def test_should_list_values_without_parameters_together(self, space):
         # Act
         text = tree_markdown(space)
 
         # Assert
-        assert "- values: `clip`, `reflect`, `random`, `round`, `wrap`, `midpoint`" in text
+        assert "- values: `auto`, `clip`, `reflect`, `random`, `wrap`, `midpoint`" in text
         assert "- other values: `arithmetic`" in text
 
 
@@ -55,6 +59,6 @@ class TestParameterRows:
 
         # Assert
         assert rows["pop_size"]["Active when"] == "(root)"
-        assert rows["crossover_prob"]["Active when"] == "crossover (any value)"
+        assert rows["crossover_probability"]["Active when"] == "crossover (any value)"
         assert rows["archive_prune_policy"]["Active when"] == "external_archive = bounded"
         assert len(rows) == len(space.all_parameters())

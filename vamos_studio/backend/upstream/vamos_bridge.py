@@ -1,50 +1,41 @@
-"""The built-in grammars, and the step from a configuration to a VAMOS algorithm configuration.
+"""VAMOS's built-in grammars as the studio's forms, and a configuration as a VAMOS configuration.
 
-Upstream target: the per-algorithm builders of ``vamos.algorithms`` that turn a configuration
-into ``NSGAIIConfig`` and the rest (today ``config_from_assignment`` plays this role), and the
-grammars shipped as VAMOS resources. Status: local. Design: ``docs/design/parameter-spaces.md``.
+VAMOS 1.4 ships its tuning spaces as grammars (``vamos/resources/parameter_spaces``, schema
+``vamos.parameter-space`` 1.0.0), the model this studio prototyped
+(docs/design/parameter-spaces.md).
+The studio reads them as they ship and adds a layer of its own (``spaces/studio.yaml``):
 
-The grammars rename a few parameters of VAMOS 1.2's tuning spaces (changes M1, M2 and M8 of the
-design); `to_vamos_assignment` maps them back, so VAMOS builds the configuration itself. Two
-algorithms need more than that:
+- ``pop_size``, which VAMOS treats as a run setting rather than a tuned parameter;
+- ``archive_subset_selection`` under an unbounded external archive, which the studio applies itself
+  (``vamos_studio/backend/subset.py``);
+- the labels and descriptions of the parameters, for the forms.
 
-- MOEA/D: its mutation probability is a factor of 1/n (M8), and with three or more objectives it
-  reads its weight vectors from jMetal's files shipped with VAMOS (`W<m>D_<population>.dat`), as
-  jMetal and Evolver do: the population is one with a file. VAMOS 1.1 read those files only
-  when given their directory; without it, its default generated a Das-Dennis lattice, so a
-  population of 100 differed from jMetal's. VAMOS 1.2 reads them by default; the studio still
-  names the directory, which gives the same vectors.
-- SMS-EMOA: VAMOS's tuning bridge (1.1 and 1.2) always selects by tournament with a reference
-  point offset of 0.1, while its default selects at random with an offset of 1.0, so the studio
-  builds `SMSEMOAConfig` itself, with VAMOS's builder and VAMOS's helpers for the operators.
+VAMOS builds the algorithm's configuration from an assignment of the grammar's values
+(``config_from_assignment``), which also turns the mutation probability factor into a probability,
+gives MOEA/D the largest population up to ``pop_size`` with weight vectors (a complete Das-Dennis
+lattice or one of jMetal's files) and RVEA the largest lattice up to ``pop_size``.
 """
 
 from __future__ import annotations
 
-import dataclasses
+import copy
 import math
-import re
 from collections.abc import Mapping
 from functools import cache
 from importlib.resources import files
-from pathlib import Path
 from typing import Any, Final
 
-from vamos.algorithms import SMSEMOAConfig
+import yaml
+from vamos.engine.algorithm.components.weight_vectors import largest_weighted_population
 from vamos.engine.algorithm.config.types import AlgorithmConfigProtocol
-from vamos.engine.tuning.racing._bridge_assignment_shared import (
-    apply_initializer,
-    apply_optional_external_archive,
-    apply_optional_repair,
-    extend_crossover_params,
-    extend_mutation_params,
-)
 from vamos.engine.tuning.racing.bridge_assignments import config_from_assignment
 
-from .parameter_space import Configuration, ParameterSpace, space_from_yaml
+from .parameter_space import Configuration, ParameterSpace, space_from_dict
 
 SPACES_PACKAGE: Final = "vamos_studio.backend.upstream.spaces"
-# Grammars shipped with the studio, as (algorithm, encoding).
+VAMOS_SPACES: Final = files("vamos") / "resources" / "parameter_spaces"
+VAMOS_WEIGHTS: Final = files("vamos") / "resources" / "weights"
+# The grammars the studio offers, as (algorithm, encoding).
 BUILTIN_SPACES: Final = (
     ("nsgaii", "real"),
     ("nsgaii", "binary"),
@@ -57,52 +48,87 @@ BUILTIN_SPACES: Final = (
     ("spea2", "real"),
     ("nsgaiii", "real"),
 )
-# Algorithms whose grammar gives the mutation probability as a factor of 1/n (M8) and whose VAMOS
-# space names polynomial mutation "pm": VAMOS builds them from the converted assignment.
-_FACTOR_ALGORITHMS: Final = frozenset({"agemoea", "rvea", "spea2", "nsgaiii"})
-
-# Parameters of the grammars that VAMOS does not have: the studio applies them itself.
-STUDIO_ONLY_PARAMETERS: Final = frozenset({"archive_subset_selection"})
-# Parameters of the SMS-EMOA grammars that its constructor applies (not in VAMOS's space).
-SMSEMOA_ONLY_PARAMETERS: Final = frozenset({"selection", "reference_point_offset"})
-# M2: parameters duplicated per production, and the single VAMOS parameter they come from.
-_RENAMED_TO_VAMOS: Final = {
-    "polynomial_eta": "mutation_eta",
-    "linked_polynomial_eta": "mutation_eta",
-}
+# Parameters of the studio's layer that VAMOS's grammars do not have.
+STUDIO_ONLY_PARAMETERS: Final = frozenset({"pop_size", "archive_subset_selection"})
+# Algorithms whose population depends on the problem's number of objectives.
+_NEEDS_N_OBJ: Final = frozenset({"moead", "rvea", "nsgaiii"})
 
 
 def space_name(algorithm: str, encoding: str) -> str:
-    """The name of the grammar of `algorithm` for `encoding` (e.g. "nsgaii_real")."""
+    """The studio's name of the grammar of `algorithm` for `encoding` (e.g. "nsgaii_real")."""
     return f"{algorithm}_{encoding}"
+
+
+def vamos_space_name(algorithm: str, encoding: str) -> str:
+    """VAMOS's name of the same grammar (e.g. "nsgaii", "nsgaii_binary")."""
+    return algorithm if encoding == "real" else f"{algorithm}_{encoding}"
+
+
+@cache
+def studio_layer() -> dict[str, Any]:
+    """The studio's layer over VAMOS's grammars (spaces/studio.yaml)."""
+    text = files(SPACES_PACKAGE).joinpath("studio.yaml").read_text(encoding="utf-8")
+    return yaml.safe_load(text)
 
 
 @cache
 def builtin_space(algorithm: str, encoding: str) -> ParameterSpace | None:
-    """The grammar of `algorithm` for `encoding` shipped with the studio, if there is one."""
+    """VAMOS's grammar of `algorithm` for `encoding` with the studio's layer, if offered."""
     if (algorithm, encoding) not in BUILTIN_SPACES:
         return None
-    resource = files(SPACES_PACKAGE).joinpath(f"{space_name(algorithm, encoding)}.yaml")
-    return space_from_yaml(resource.read_text(encoding="utf-8"))
+    text = VAMOS_SPACES.joinpath(f"{vamos_space_name(algorithm, encoding)}.yaml")
+    document = yaml.safe_load(text.read_text(encoding="utf-8"))
+    return space_from_dict(with_studio_layer(document, algorithm, encoding))
 
 
-def to_vamos_assignment(configuration: Configuration) -> dict[str, Any]:
-    """The configuration in the vocabulary of VAMOS 1.2's tuning spaces.
+def with_studio_layer(document: dict[str, Any], algorithm: str, encoding: str) -> dict[str, Any]:
+    """A VAMOS grammar document with the studio's population, subset selection and labels."""
+    layer = studio_layer()
+    document = copy.deepcopy(document)
+    name = space_name(algorithm, encoding)
+    document["name"] = name
+    population = dict(layer["pop_size"])
+    population["description"] = layer["population_descriptions"].get(
+        algorithm, population["description"]
+    )
+    document["parameters"] = {"pop_size": population, **document["parameters"]}
+    archive = document["parameters"].get("external_archive")
+    if archive is not None and "unbounded" in archive.get("values", {}):
+        unbounded = archive["values"]["unbounded"] or {}
+        unbounded.setdefault("conditional_parameters", {})["archive_subset_selection"] = dict(
+            layer["archive_subset_selection"]
+        )
+        archive["values"]["unbounded"] = unbounded
+    labels = layer["labels"] | layer["space_labels"].get(name, {})
+    _label(document["parameters"], labels)
+    return document
 
-    Args:
-        configuration: A configuration of a built-in grammar.
 
-    Returns:
-        The assignment that VAMOS's `config_from_assignment` expects.
+def _label(parameters: dict[str, Any], labels: Mapping[str, Mapping[str, str]]) -> None:
+    for parameter_name, parameter in parameters.items():
+        for key, text in labels.get(parameter_name, {}).items():
+            if text and not parameter.get(key):
+                parameter[key] = text
+        _label(parameter.get("global_sub_parameters") or {}, labels)
+        values = parameter.get("values")
+        if isinstance(values, dict):
+            for production in values.values():
+                _label((production or {}).get("conditional_parameters") or {}, labels)
+
+
+def to_vamos_assignment(configuration: Configuration, n_obj: int | None = None) -> dict[str, Any]:
+    """The assignment VAMOS's `config_from_assignment` builds the configuration from.
+
+    The grammar's values, without the studio's subset selection, with the population and, for the
+    algorithms whose population depends on it, the problem's number of objectives.
     """
-    assignment: dict[str, Any] = {}
-    for name, value in configuration.values.items():
-        if name in STUDIO_ONLY_PARAMETERS:
-            continue
-        if name == "external_archive":
-            assignment.update(_archive_assignment(str(value)))
-        else:
-            assignment[_RENAMED_TO_VAMOS.get(name, name)] = value
+    assignment = {
+        name: value
+        for name, value in configuration.values.items()
+        if name != "archive_subset_selection"
+    }
+    if configuration.space.algorithm in _NEEDS_N_OBJ:
+        assignment["n_obj"] = n_obj or 2
     return assignment
 
 
@@ -113,69 +139,33 @@ def to_algorithm_config(
 
     Args:
         configuration: A configuration of a built-in grammar.
-        n_var: The problem's number of variables: MOEA/D and SMS-EMOA need it to turn the
-            mutation probability factor into a probability.
-        n_obj: The problem's number of objectives: MOEA/D needs it for its population.
-
-    Raises:
-        ValueError: If the algorithm needs `n_var` and it is not given.
+        n_var: The problem's number of variables (VAMOS resolves the mutation probability factor
+            when the run starts; kept for the callers that pass it).
+        n_obj: The problem's number of objectives: MOEA/D, RVEA and NSGA-III need it.
     """
+    del n_var
     space = configuration.space
-    vamos_space = space.algorithm if space.encoding == "real" else space.name
-    assignment = to_vamos_assignment(configuration)
-    if space.algorithm == "moead":
-        assignment["mutation_prob"] = mutation_probability(assignment, n_var)
-        assignment["pop_size"] = weight_population(int(assignment["pop_size"]), n_obj or 2)
-        return with_weight_files(config_from_assignment(vamos_space, assignment), n_obj or 2)
-    if space.algorithm == "smsemoa":
-        return smsemoa_config(assignment, n_var)
-    if space.algorithm in _FACTOR_ALGORITHMS:
-        assignment["mutation_prob"] = mutation_probability(assignment, n_var)
-        if assignment.get("mutation") == "polynomial":
-            assignment["mutation"] = "pm"
-        if space.algorithm == "rvea":
-            assignment["n_obj"] = n_obj or 2  # its population is the lattice for these objectives
-    return config_from_assignment(vamos_space, assignment)
+    return config_from_assignment(
+        vamos_space_name(space.algorithm, space.encoding),
+        to_vamos_assignment(configuration, n_obj),
+    )
 
 
 def population(values: Mapping[str, Any], algorithm: str, n_obj: int) -> int:
     """The population a configuration runs with on a problem of `n_obj` objectives.
 
-    RVEA's is its Das-Dennis lattice of `n_partitions` divisions; MOEA/D's, with three or more
-    objectives, one with a weight vector file (see `weight_population`); the others', `pop_size`.
+    MOEA/D's, with three or more objectives, the largest up to `pop_size` with weight vectors;
+    RVEA's, its largest Das-Dennis lattice up to `pop_size` (or the lattice of `n_partitions`, for a
+    run saved before VAMOS 1.4); the others', `pop_size`.
     """
-    if algorithm == "rvea":
+    if algorithm == "rvea" and "n_partitions" in values:
         return math.comb(int(values["n_partitions"]) + n_obj - 1, n_obj - 1)
     pop_size = int(values["pop_size"])
+    if algorithm == "rvea":
+        return lattice(pop_size, n_obj)[1]
     if algorithm == "moead":
         return weight_population(pop_size, n_obj)
     return pop_size
-
-
-def mutation_probability(assignment: dict[str, Any], n_var: int | None) -> float:
-    """M8: the probability of mutating each variable, from its factor of 1/n."""
-    if n_var is None:
-        raise ValueError("The mutation probability needs the problem's number of variables.")
-    return float(assignment.pop("mutation_prob_factor")) / n_var
-
-
-_WEIGHT_FILE: Final = re.compile(r"W(\d+)D_(\d+)\.dat")
-
-
-def weights_directory() -> Path:
-    """The directory of jMetal's weight vector files that VAMOS ships."""
-    return Path(str(files("vamos") / "resources" / "weights"))
-
-
-@cache
-def weight_populations(n_obj: int) -> tuple[int, ...]:
-    """The population sizes there is a weight vector file for, with `n_obj` objectives."""
-    sizes = []
-    for path in weights_directory().iterdir():
-        match = _WEIGHT_FILE.fullmatch(path.name)
-        if match and int(match.group(1)) == n_obj:
-            sizes.append(int(match.group(2)))
-    return tuple(sorted(sizes))
 
 
 def lattice(pop_size: int, n_obj: int) -> tuple[int, int]:
@@ -189,72 +179,53 @@ def lattice(pop_size: int, n_obj: int) -> tuple[int, int]:
     return divisions, math.comb(divisions + n_obj - 1, n_obj - 1)
 
 
-def weight_population(pop_size: int, n_obj: int) -> int:
-    """MOEA/D's population for `pop_size`: one with a weight vector file, as in jMetal.
+def exact_divisions(size: int, n_obj: int) -> int | None:
+    """The divisions of the complete Das-Dennis lattice with exactly `size` vectors, if any."""
+    divisions = 1
+    while (vectors := math.comb(divisions + n_obj - 1, n_obj - 1)) < size:
+        divisions += 1
+    return divisions if vectors == size else None
 
-    With two objectives the weights are uniform and any size works. With more, the size has a
-    file if there is one; otherwise the largest size with a file up to it, or the smallest. Without
-    any file for `n_obj` objectives, the size of the largest Das-Dennis lattice up to `pop_size`.
+
+@cache
+def weight_populations(n_obj: int) -> tuple[int, ...]:
+    """The populations with a jMetal weight vector file that VAMOS reads, for `n_obj` objectives.
+
+    A file counts when it has as many rows as its name says: VAMOS skips the others (VAMOS 1.4
+    ships a `W4D_100.dat` with 200 rows).
     """
-    if n_obj < 3:
+    sizes = []
+    prefix = f"W{n_obj}D_"
+    for path in VAMOS_WEIGHTS.iterdir():
+        name = path.name
+        if name.startswith(prefix) and name.endswith(".dat"):
+            size = int(name[len(prefix) : -len(".dat")])
+            rows = sum(1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
+            if rows == size:
+                sizes.append(size)
+    return tuple(sorted(sizes))
+
+
+def weight_population(pop_size: int, n_obj: int) -> int:
+    """MOEA/D's population for `pop_size`: the largest up to it with weight vectors, as VAMOS runs.
+
+    With two objectives any size works. With more, a complete Das-Dennis lattice or one of jMetal's
+    files; with fewer solutions than objectives, `pop_size` (VAMOS rejects it).
+    """
+    if n_obj < 3 or pop_size < n_obj:
         return pop_size
-    sizes = weight_populations(n_obj)
-    if not sizes:
-        return lattice(pop_size, n_obj)[1]
-    fitting = [size for size in sizes if size <= pop_size]
-    return fitting[-1] if fitting else sizes[0]
+    return largest_weighted_population(pop_size, n_obj)
 
 
 def weight_file(pop_size: int, n_obj: int) -> str | None:
-    """The weight vector file MOEA/D reads for a population, or None (two objectives, or none)."""
-    if n_obj < 3 or not weight_populations(n_obj):
-        return None
-    return f"W{n_obj}D_{weight_population(pop_size, n_obj)}.dat"
+    """The jMetal file MOEA/D reads its weights from for `pop_size`, or None.
 
-
-def with_weight_files(config: Any, n_obj: int) -> Any:
-    """MOEA/D's weight vectors with three or more objectives: jMetal's file, or else a lattice.
-
-    The lattice is VAMOS's Das-Dennis lattice of exactly the configuration's population, which
-    `weight_population` has made the size of one.
+    None with two objectives (uniform weights) and when the population is a complete Das-Dennis
+    lattice, which VAMOS prefers to a file of the same size.
     """
     if n_obj < 3:
-        return config
-    if not weight_populations(n_obj):
-        divisions = lattice(int(config.pop_size), n_obj)[0]
-        return dataclasses.replace(config, weight_vectors={"path": None, "divisions": divisions})
-    path = str(weights_directory())
-    return dataclasses.replace(config, weight_vectors={"path": path, "divisions": None})
-
-
-def smsemoa_config(assignment: dict[str, Any], n_var: int | None) -> AlgorithmConfigProtocol:
-    """SMS-EMOA's configuration, built with VAMOS's builder and its helpers for the operators."""
-    builder = SMSEMOAConfig.builder()
-    pop_size = int(assignment["pop_size"])
-    builder.pop_size(pop_size)
-    apply_initializer(builder, assignment, pop_size)
-    crossover = str(assignment["crossover"])
-    crossover_params: dict[str, Any] = {}
-    if "crossover_prob" in assignment:
-        crossover_params["prob"] = float(assignment["crossover_prob"])
-    extend_crossover_params(crossover, assignment, crossover_params)
-    builder.crossover(crossover, **crossover_params)
-    mutation = str(assignment["mutation"])
-    mutation_params: dict[str, Any] = {"prob": mutation_probability(assignment, n_var)}
-    extend_mutation_params(mutation, assignment, mutation_params)
-    builder.mutation(mutation, **mutation_params)
-    if assignment["selection"] == "tournament":
-        builder.selection("tournament", size=int(assignment["selection_pressure"]))
-    else:
-        builder.selection("random")
-    builder.reference_point(offset=float(assignment["reference_point_offset"]), adaptive=True)
-    apply_optional_repair(builder, assignment)
-    apply_optional_external_archive(builder, assignment, pop_size)
-    return builder.build()
-
-
-def _archive_assignment(choice: str) -> dict[str, bool]:
-    """M1: the external_archive choice as VAMOS's two archive switches."""
-    if choice == "none":
-        return {"use_external_archive": False}
-    return {"use_external_archive": True, "archive_unbounded": choice == "unbounded"}
+        return None
+    size = weight_population(pop_size, n_obj)
+    if exact_divisions(size, n_obj) is not None or size not in weight_populations(n_obj):
+        return None
+    return f"W{n_obj}D_{size}.dat"

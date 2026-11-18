@@ -4,6 +4,7 @@ A run is launched from New run as a user would, and then followed in the other p
 """
 
 import dataclasses
+import json
 from pathlib import Path
 
 import pytest
@@ -192,6 +193,29 @@ class TestMonitorHistoryResults:
         assert "No run has results yet." in [info.value for info in app.info]
 
 
+class TestRunsOfEarlierGrammars:
+    def test_should_show_the_configuration_of_a_run_saved_before_vamos_1_4(
+        self, tmp_path, monkeypatch
+    ):
+        """A run saved with the studio's own grammars (other names) opens as it was saved."""
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        run = runs.launch(make_request(), tmp_path)
+        wait_for_end(run)
+        saved = json.loads((run.directory / runs.REQUEST_FILE).read_text())
+        values = saved["configuration"]
+        values["crossover_eta"] = values.pop("sbx_distribution_index")
+        saved["space_hash"] = "sha256:an-earlier-grammar"
+        (run.directory / runs.REQUEST_FILE).write_text(json.dumps(saved))
+
+        # Act
+        app = open_page(RESULTS)
+
+        # Assert
+        assert not app.exception
+        assert any("--crossover_eta 20.0" in block.value for block in app.code)
+
+
 class TestThreeObjectives:
     def test_should_launch_dtlz2_with_three_objectives_and_show_its_results(
         self, tmp_path, monkeypatch
@@ -290,7 +314,7 @@ class TestManyObjectives:
         state = wait_for_end(run)
 
         # Assert
-        assert any("has a weight vector file for 6 objectives" in note for note in notes)
+        assert any("lattice of 3 divisions, 56 vectors" in note for note in notes)
         assert state == RunState.FINISHED
         assert runs.manifest(run)["resolved_spec"]["algorithm"]["config"]["pop_size"] == 56
 
@@ -316,7 +340,7 @@ class TestMoreAlgorithms:
         assert not app.exception and not results.exception
         assert state == RunState.FINISHED
         if label == "RVEA":
-            assert any("RVEA runs with 13 solutions" in caption for caption in captions)
+            assert any("RVEA runs with 100 solutions" in caption for caption in captions)
 
 
 class TestUnboundedArchiveResults:

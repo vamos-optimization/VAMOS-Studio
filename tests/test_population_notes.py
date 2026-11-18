@@ -28,13 +28,33 @@ class TestPopulationNotes:
         # Assert
         assert level == "caption" and "36 reference directions" in text
 
-    @pytest.mark.parametrize(
-        ("divisions", "n_obj", "warning"),
-        [(12, 3, None), (12, 2, "is small"), (8, 2, "more divisions"), (8, 8, "is large")],
-    )
-    def test_should_warn_about_rvea_populations_out_of_range(self, divisions, n_obj, warning):
+    def test_should_prefer_a_complete_lattice_to_a_weight_file_of_the_same_size(self):
         # Act
-        notes = population_notes("rvea", {"n_partitions": divisions}, n_obj)
+        [(level, text)] = population_notes("moead", {"pop_size": 91}, 3)
+
+        # Assert
+        assert level == "caption" and "lattice of 12 divisions, 91 vectors" in text
+
+    def test_should_say_moead_runs_a_smaller_population_with_weight_vectors(self):
+        # Act
+        [(level, text)] = population_notes("moead", {"pop_size": 150}, 3)
+
+        # Assert
+        assert level == "info" and "lattice of 15 divisions, 136 vectors" in text
+        assert "up to 150" in text
+
+    @pytest.mark.parametrize(
+        ("values", "n_obj", "warning"),
+        [
+            ({"pop_size": 100}, 3, None),
+            ({"pop_size": 40}, 3, "is small"),
+            ({"pop_size": 100}, 8, "next lattice"),
+            ({"n_partitions": 8}, 8, "is large"),
+        ],
+    )
+    def test_should_warn_about_rvea_populations_out_of_range(self, values, n_obj, warning):
+        # Act
+        notes = population_notes("rvea", values, n_obj)
 
         # Assert
         warnings = [text for level, text in notes if level == "warning"]

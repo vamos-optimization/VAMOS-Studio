@@ -16,7 +16,8 @@ st.title("Algorithms")
 st.markdown(
     "The multi-objective algorithms of VAMOS and how each one can be configured. A parameter "
     "space is a grammar: a categorical parameter chooses a value, and each value activates its "
-    "own parameters."
+    "own parameters. The spaces are VAMOS's own, with Evolver's names for the parameters; the "
+    "studio adds the population size."
 )
 st.info(
     "The algorithms with a parameter space in the studio are available; NSGA-II, MOEA/D and "

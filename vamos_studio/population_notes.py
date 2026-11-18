@@ -2,16 +2,19 @@
 
 The population a configuration runs with is not always its `pop_size`: MOEA/D's follows its weight
 vectors, NSGA-III's reference directions are the largest lattice that fits the population, and
-RVEA has no population of its own (its lattice). Some algorithms are also known to struggle with
-four or more objectives. Each note is a level ("caption", "info" or "warning") and a text.
+RVEA's population is the largest lattice that fits its `pop_size`. Some algorithms are also known
+to struggle with four or more objectives. Each note is a level ("caption", "info" or "warning")
+and a text.
 """
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from typing import Any, Final, Literal
 
 from vamos_studio.backend.upstream.vamos_bridge import (
+    exact_divisions,
     lattice,
     population,
     weight_file,
@@ -78,49 +81,67 @@ def objective_notes(algorithm: str, n_obj: int) -> list[Note]:
 
 
 def _moead_note(asked: int, n_obj: int) -> Note:
-    size = weight_population(asked, n_obj)
-    if not weight_populations(n_obj):
-        divisions = lattice(asked, n_obj)[0]
+    if asked < n_obj:
         return (
-            "info",
-            f"Neither jMetal nor VAMOS has a weight vector file for {n_obj} objectives: MOEA/D "
-            f"uses VAMOS's Das-Dennis lattice of {divisions} divisions, {size:,} vectors, the "
-            f"largest that fits the population of {asked}, and runs with that population.",
+            "warning",
+            f"MOEA/D needs at least one weight vector per objective: a population of at least "
+            f"{n_obj} for {n_obj} objectives.",
         )
-    sizes = ", ".join(str(item) for item in weight_populations(n_obj))
+    size = weight_population(asked, n_obj)
+    shortfall = "." if size == asked else f", the largest population up to {asked} that has them."
+    file = weight_file(asked, n_obj)
+    if file is not None:
+        return (
+            "caption",
+            f"MOEA/D reads its {size} weight vectors from {file}, jMetal's file shipped with "
+            f"VAMOS, as jMetal and Evolver do{shortfall}",
+        )
+    divisions = exact_divisions(size, n_obj)
+    files = weight_populations(n_obj)
     return (
-        "caption",
-        f"MOEA/D reads its {size} weight vectors from {weight_file(asked, n_obj)}, jMetal's file "
-        "shipped with VAMOS, as jMetal and Evolver do"
-        + ("." if size == asked else f": there is none for {asked}.")
-        + f" Populations with a file for {n_obj} objectives: {sizes}.",
+        "caption" if size == asked else "info",
+        f"MOEA/D's weight vectors are VAMOS's Das-Dennis lattice of {divisions} divisions, "
+        f"{size:,} vectors{shortfall}"
+        + (
+            f" jMetal's weight files for {n_obj} objectives have "
+            + ", ".join(str(item) for item in files)
+            + " vectors."
+            if files
+            else ""
+        ),
     )
 
 
 def _rvea_notes(values: Mapping[str, Any], n_obj: int) -> list[Note]:
     size = population(values, "rvea", n_obj)
-    divisions = int(values["n_partitions"])
+    if "n_partitions" in values:  # a run saved before VAMOS 1.4
+        divisions = int(values["n_partitions"])
+        asked = size
+    else:
+        asked = int(values["pop_size"])
+        divisions = lattice(asked, n_obj)[0]
     notes: list[Note] = [
         (
             "caption",
-            f"RVEA runs with {size:,} solutions, one per reference vector: the Das-Dennis lattice "
-            f"of {divisions} divisions for {n_obj} objectives.",
+            f"RVEA runs with {size:,} solutions, one per reference vector: the largest Das-Dennis "
+            f"lattice up to {asked}, {divisions} divisions for {n_obj} objectives.",
         )
     ]
     if size < SMALL_POPULATION:
-        more = (
-            "more divisions give a larger lattice (VAMOS allows up to 12)"
-            if divisions < 12
-            else f"VAMOS's RVEA allows at most 12 divisions, so with {n_obj} objectives it "
-            "cannot have more"
+        following = math.comb(divisions + 1 + n_obj - 1, n_obj - 1)
+        notes.append(
+            (
+                "warning",
+                f"A population of {size} is small: the next lattice for {n_obj} objectives has "
+                f"{following:,} vectors, and needs a population of at least that.",
+            )
         )
-        notes.append(("warning", f"A population of {size} is small: {more}."))
     elif size > LARGE_POPULATION:
         notes.append(
             (
                 "warning",
                 f"A population of {size:,} is large: every generation evaluates that many "
-                "solutions. Fewer divisions give a smaller lattice (VAMOS allows 4 to 12).",
+                "solutions. A smaller population gives a smaller lattice.",
             )
         )
     return notes

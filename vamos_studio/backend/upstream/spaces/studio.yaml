@@ -1,0 +1,263 @@
+# VAMOS-Studio's layer over VAMOS's built-in grammars (vamos/resources/parameter_spaces).
+#
+# The grammars are VAMOS's own, read as they ship (schema vamos.parameter-space 1.0.0). The studio
+# adds what a form needs and VAMOS's tuning spaces leave out:
+# - pop_size: a run setting in VAMOS, first in every form (population_descriptions per algorithm);
+# - archive_subset_selection: under external_archive = unbounded, the studio selects the run's
+#   result from the archive itself (vamos_studio/backend/subset.py);
+# - labels and descriptions of the parameters (labels), with a space's own where they differ
+#   (space_labels, keyed by the studio's space name).
+pop_size:
+  type: int
+  default: 100
+  range:
+  - 20
+  - 200
+  log: true
+  role: population
+  label: Population size
+  description: Number of solutions in the population.
+population_descriptions:
+  moead: 'Number of solutions in the population. With three or more objectives, the largest up to it with
+    weight vectors: a complete Das-Dennis lattice or one of jMetal''s weight files.'
+  rvea: 'Its upper bound: RVEA''s reference vectors are the largest Das-Dennis lattice with at most this
+    many vectors for the problem''s objectives, and the population has one solution per vector (91 for
+    100 with three objectives).'
+  nsgaiii: Number of solutions in the population. Its reference directions are the largest Das-Dennis
+    lattice that fits in it.
+archive_subset_selection:
+  type: categorical
+  default: farthest
+  values:
+  - farthest
+  - crowding
+  - hv_greedy
+  - kmeans
+  - none
+  role: structural
+  label: Subset selection
+  description: How the run's result is chosen from the unbounded archive, as many solutions as the population;
+    none returns the whole archive.
+labels:
+  adapt_freq:
+    label: Adaptation frequency
+    description: Fraction of the run between two adaptations of the reference vectors to the population's
+      ranges.
+  aggregation_function:
+    label: Aggregation
+    description: How the objectives of a subproblem are aggregated.
+  alpha:
+    label: Alpha
+    description: How fast the angle penalty grows over the run, from favoring convergence to favoring
+      diversity.
+  archive_prune_policy:
+    label: Pruning policy
+    description: How a full archive, as large as the population, discards solutions.
+  archive_size:
+    label: Archive size
+    description: Number of solutions in SPEA2's archive, from which parents are selected and the result
+      is taken; VAMOS's default is the population size.
+  atch_rho:
+    label: Rho (augmented Tchebycheff)
+    description: The weight of the sum term of the augmented Tchebycheff aggregation.
+  blx_repair:
+    label: BLX repair
+    description: How BLX-alpha offspring outside the bounds are brought back.
+  blxab_alpha:
+    label: Alpha
+    description: BLX-alpha-beta extension on the side of the better parent.
+  blxab_beta:
+    label: Beta
+    description: BLX-alpha-beta extension on the side of the worse parent.
+  cauchy_gamma:
+    label: Gamma
+    description: Scale of the Cauchy steps.
+  crossover:
+    label: Crossover
+    description: The crossover operator.
+  crossover_alpha:
+    label: Alpha
+    description: BLX-alpha extension of the interval between the parents.
+  crossover_probability:
+    label: Crossover probability
+    description: Probability of applying the crossover to a pair of parents.
+  de_base:
+    label: DE base vector
+    description: 'The base of the difference: the current solution (MOEA/D-DE) or another random parent
+      (Evolver''s MOEA/D).'
+  de_crossover_rate:
+    label: CR
+    description: Differential evolution crossover rate.
+  de_scale_factor:
+    label: F
+    description: Differential evolution scale factor.
+  de_scheme:
+    label: DE scheme
+    description: 'The differential evolution scheme: one or two difference vectors (rand/1, rand/2), with
+      binomial or exponential crossover.'
+  external_archive:
+    label: External archive
+    description: Whether non-dominated solutions are kept in an archive besides the population; a bounded
+      archive is as large as the population, and from an unbounded one the result keeps as many solutions
+      as the population.
+  fuzzy_d:
+    label: Spread
+    description: Spread of the fuzzy recombination around each parent.
+  gaussian_sigma:
+    label: Sigma
+    description: Standard deviation of the Gaussian steps, relative to the variable range.
+  initial_solutions:
+    label: Initialization
+    description: How the initial population is created.
+  ipbi_theta:
+    label: Penalty (inverted PBI)
+    description: The inverted PBI penalty on the distance from the weight vector.
+  k_neighbors:
+    label: Density neighbor (k)
+    description: The density of a solution is computed from its distance to its k-th nearest neighbor;
+      VAMOS and jMetal use the first.
+  laplace_a:
+    label: Location
+    description: Location parameter of the Laplace distribution.
+  laplace_b:
+    label: Scale
+    description: Scale parameter of the Laplace distribution.
+  levy_beta:
+    label: Beta
+    description: Stability index of the Levy distribution.
+  levy_scale:
+    label: Scale
+    description: Scale of the Levy steps.
+  linked_polynomial_mutation_distribution_index:
+    label: Distribution index
+    description: Distribution index of the linked polynomial mutation.
+  maximum_number_of_replaced_solutions:
+    label: Replacement limit
+    description: Most neighbors an offspring may replace.
+  mtch_rho:
+    label: Rho (modified Tchebycheff)
+    description: The weight of the sum term of VAMOS's modified Tchebycheff aggregation.
+  mutation:
+    label: Mutation
+    description: The mutation operator.
+  mutation_probability_factor:
+    label: Mutation probability factor
+    description: The probability of mutating each variable is this factor divided by their number.
+  neighborhood_selection_probability:
+    label: Neighborhood probability
+    description: Probability of choosing parents from the neighborhood instead of the whole population.
+  neighborhood_size:
+    label: Neighborhood size
+    description: Number of neighboring subproblems a subproblem mates and replaces within.
+  nonuniform_perturbation:
+    label: Perturbation
+    description: Size of the non-uniform mutation steps, which shrink over the run.
+  normalization_epsilon:
+    label: Normalization epsilon
+    description: Added to the range of each objective when normalizing, to avoid dividing by zero.
+  normalize_objectives:
+    label: Normalize the objectives
+    description: Whether the aggregation scales the objectives by the ideal and estimated nadir points.
+  offspring_ratio:
+    label: Offspring ratio
+    description: Offspring per generation, as a fraction of the population size (at least one).
+  pbi_theta:
+    label: Penalty
+    description: PBI penalty on the distance from the weight vector.
+  pcx_sigma_eta:
+    label: Sigma eta
+    description: Spread along the direction from the centroid to the parent.
+  pcx_sigma_zeta:
+    label: Sigma zeta
+    description: Spread across the other directions.
+  polynomial_mutation_distribution_index:
+    label: Distribution index
+    description: Polynomial mutation distribution index; larger values give smaller steps.
+  power_index:
+    label: Index
+    description: Exponent of the power-law distribution of the steps.
+  reference_point_offset:
+    label: Reference point offset
+    description: How far beyond the worst value of each objective the hypervolume's reference point lies,
+      adapted as the run goes on.
+  repair:
+    label: Repair
+    description: How variables that leave their bounds are brought back.
+  sbx_distribution_index:
+    label: Distribution index
+    description: SBX distribution index; larger values give offspring closer to parents.
+  scatter_base_size_factor:
+    label: Base size factor
+    description: Size of the scatter-search base set, as a fraction of the population.
+  selection:
+    label: Selection
+    description: How parents are chosen for variation.
+  simplex_epsilon:
+    label: Expansion
+    description: Expansion rate of the simplex around the parents' centroid.
+  subproblem_order:
+    label: Order of the subproblems
+    description: 'The order in which each generation visits the subproblems: a random permutation, or
+      their index order.'
+  tournament_size:
+    label: Tournament size
+    description: Number of candidates compared in each tournament.
+  undx_eta:
+    label: Eta
+    description: Spread orthogonal to that line.
+  undx_zeta:
+    label: Zeta
+    description: Spread along the line between the first two parents.
+  uniform_perturb:
+    label: Perturbation
+    description: Maximum size of the uniform steps, relative to the variable range.
+  variation:
+    label: Variation
+    description: 'How children are made: differential evolution, or a crossover followed by a mutation.'
+  wa_alpha:
+    label: Alpha
+    description: Weight of the first parent in the whole arithmetic crossover.
+space_labels:
+  moead_binary:
+    crossover:
+      label: Crossover
+      description: The crossover operator of bit strings.
+    mutation:
+      label: Mutation
+      description: The mutation operator of bit strings.
+    mutation_probability_factor:
+      label: Mutation probability factor
+      description: The probability of mutating each bit is this factor divided by their number.
+  moead_real:
+    crossover:
+      label: Crossover
+      description: The variation operator.
+  nsgaii_binary:
+    crossover:
+      label: Crossover
+      description: The crossover operator of bit strings.
+    mutation:
+      label: Mutation
+      description: The mutation operator of bit strings.
+    mutation_probability_factor:
+      label: Mutation probability factor
+      description: The probability of mutating each bit is this factor divided by their number.
+  nsgaiii_real:
+    tournament_size:
+      label: Tournament size
+      description: Number of candidates compared in each tournament of the mating selection, by rank and
+        crowding distance (VAMOS's NSGA-III always selects by tournament).
+  smsemoa_binary:
+    crossover:
+      label: Crossover
+      description: The crossover operator of bit strings.
+    mutation:
+      label: Mutation
+      description: The mutation operator of bit strings.
+    mutation_probability_factor:
+      label: Mutation probability factor
+      description: The probability of mutating each bit is this factor divided by their number.
+  spea2_real:
+    tournament_size:
+      label: Tournament size
+      description: Number of candidates compared in each binary tournament of the mating selection.

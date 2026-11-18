@@ -130,6 +130,39 @@ def show_solutions(front: np.ndarray, variables: np.ndarray, run_id: str) -> Non
     )
 
 
+def render_configuration(request: runs.SolveRequest) -> None:
+    """The run's configuration: its changes from the default, and its command line.
+
+    A run saved with an earlier grammar (another hash, such as the studio's own grammars before
+    VAMOS 1.4) is shown as it was saved, since its parameters may have other names now.
+    """
+    space = builtin_space(request.algorithm, request.encoding)
+    if space is None or space.content_hash() != request.space_hash:
+        st.markdown(
+            "**Configuration** — as saved with an earlier version of the algorithm's grammar:"
+        )
+        st.code(
+            " ".join(
+                f"--{name} {format_value(value)}" for name, value in request.configuration.items()
+            ),
+            language="bash",
+            wrap_lines=True,
+        )
+        return
+    configuration = space.configuration(request.configuration)
+    changed = changes(configuration)
+    st.markdown(
+        "**Configuration** — "
+        + (
+            "the default one."
+            if not changed
+            else "changed from the default: "
+            + ", ".join(f"`{c.name}` = {format_value(c.value)}" for c in changed)
+        )
+    )
+    st.code(configuration.to_cli(), language="bash", wrap_lines=True)
+
+
 def show_details(run: runs.SolveRun, request: runs.SolveRequest) -> None:
     manifest = runs.manifest(run) or {}
     outcome = manifest.get("outcome", {})
@@ -147,19 +180,7 @@ def show_details(run: runs.SolveRun, request: runs.SolveRequest) -> None:
         )
     if runs.state(run) == runs.RunState.STOPPED:
         st.info(f"Stopped at your request, before its budget of {request.max_evaluations:,}.")
-    space = builtin_space(request.algorithm, request.encoding)
-    configuration = space.configuration(request.configuration)
-    changed = changes(configuration)
-    st.markdown(
-        "**Configuration** — "
-        + (
-            "the default one."
-            if not changed
-            else "changed from the default: "
-            + ", ".join(f"`{c.name}` = {format_value(c.value)}" for c in changed)
-        )
-    )
-    st.code(configuration.to_cli(), language="bash", wrap_lines=True)
+    render_configuration(request)
     if st.button("Verify the run artifact", icon=":material/verified:"):
         verification = runs.verify(run)
         message = (
