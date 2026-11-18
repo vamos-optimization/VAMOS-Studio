@@ -313,9 +313,38 @@ chosen from an unbounded archive. Such parameters are listed in `STUDIO_ONLY_PAR
 (`vamos_bridge.py`), are left out of what is passed to VAMOS, and are excluded from the
 drift-detection comparison with VAMOS's space. Each one is an upstream candidate (`UPSTREAM.md`).
 
+### 7.3 VAMOS 1.4: VAMOS's grammars replace the studio's
+
+VAMOS 1.3 and 1.4 implemented this design as VAMOS-CONFIG: `vamos.engine.tuning.grammar` reads
+spaces of the schema `vamos.parameter-space` 1.0.0 (rules G1–G7), and VAMOS ships its 53 tuning
+spaces as YAML grammars (`vamos/resources/parameter_spaces`), every parameter with a default and
+Evolver's names in snake_case (`sbx_distribution_index`, `crossover_probability`,
+`tournament_size`, `initial_solutions`, ...). M1–M5 and M8 are applied in VAMOS itself, and
+`config_from_assignment` builds a configuration from a grammar's values: it turns the mutation
+probability factor into a probability, and gives MOEA/D and RVEA their populations from
+`pop_size` and the problem's `n_obj`.
+
+Since VAMOS 1.4 the studio reads VAMOS's grammars as they ship, with its own model
+(`parameter_space.py`, which reads the same schema), and adds a layer of its own
+(`vamos_studio/backend/upstream/spaces/studio.yaml`):
+
+- `pop_size`, first in every form: VAMOS's grammars leave it out, as a run setting (RVEA runs the
+  largest Das-Dennis lattice up to it, MOEA/D with three or more objectives the largest
+  population up to it with weight vectors);
+- `archive_subset_selection` under `external_archive = unbounded` (section 7.2);
+- labels and descriptions for the forms, which VAMOS's grammars do not give.
+
+Tests check that the layer adds only that to each VAMOS grammar, with the same domains and
+defaults, and that each default configuration runs exactly as VAMOS's default (G7). The studio's
+own grammars (sections 7.1–7.1c) are deleted; runs saved with them keep their configuration, which
+Results shows as saved.
+
 ## 8. Plan
 
-- **VAMOS-Studio (now).** `vamos_studio/backend/upstream/parameter_space.py` implements the
+- **Status (VAMOS 1.4).** Done up to the derivation-tree solution type, which VAMOS leaves to a
+  separate project (VAMONOS, built on VAMOS and Evolver): see section 7.3. What follows is the plan
+  as it was written.
+- **VAMOS-Studio (then).** `vamos_studio/backend/upstream/parameter_space.py` implements the
   grammar model, the validator, YAML/JSON serialization and configurations.
   - It **builds** the grammars from VAMOS 1.1's current spaces and `XConfig.default()`. It applies
     M1 and M2 as an adapter, and maps the renamed parameters back when it calls

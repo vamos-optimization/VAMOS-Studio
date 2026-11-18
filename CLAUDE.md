@@ -50,7 +50,7 @@ checkable with `vamos.verify_run`. Runs survive closing the browser.
   `available_algorithms`, operator discovery) and `vamos.problems`.
 - Some needs (problem metadata, parameter spaces of each algorithm, the live-visualization
   protocol with `should_stop()`) are only covered by **internal or experimental** VAMOS code in
-  1.2. Use them only inside `vamos_studio/backend/`, and keep VAMOS pinned to a minor series
+  1.4. Use them only inside `vamos_studio/backend/`, and keep VAMOS pinned to a minor series
   (`pyproject.toml`). A drift-detection test must fail when VAMOS adds or removes algorithms or
   parameters that the catalogue has not triaged.
 - Parameter spaces follow [docs/design/parameter-spaces.md](docs/design/parameter-spaces.md):

@@ -6,7 +6,7 @@ with.
 
 ## 0.1.0 (unreleased)
 
-Works with VAMOS 1.2 (1.2.1 or later).
+Works with VAMOS 1.4 (1.4.0 or later).
 
 ### Added
 
@@ -166,6 +166,19 @@ Works with VAMOS 1.2 (1.2.1 or later).
 
 ### Changed
 
+- **VAMOS 1.4.0 or later** (up to 1.5) instead of 1.2.1. The algorithms' parameter spaces are now
+  **VAMOS's own grammars**, which VAMOS 1.4 ships on the model the studio prototyped: the studio
+  adds the population size, the subset selection of an unbounded archive and the labels of the
+  forms. Parameters take Evolver's names (`sbx_distribution_index`, `crossover_probability`,
+  `tournament_size`, `initial_solutions`, ...); MOEA/D gains Evolver's options (subproblem order,
+  DE schemes and base, augmented and inverted aggregations, normalization of the objectives,
+  crossover and mutation instead of DE); SMS-EMOA and the others gain Evolver's operators and
+  Sobol, Halton and opposition-based initialization. RVEA takes a population size, and runs the
+  largest Das-Dennis lattice up to it. MOEA/D with three or more objectives runs the largest
+  population up to its size with weight vectors, a complete lattice before one of jMetal's files.
+  Default configurations run as before. Runs saved with earlier grammars keep their
+  configuration, which Results shows as saved. Problems with other arguments (ZCAT's `level`,
+  the knapsack's `capacity_ratio`) are given to VAMOS by id, so their runs replay exactly.
 - **VAMOS 1.2.1 or later** (up to 1.3) instead of 1.1. Following VAMOS 1.2's new defaults, the
   grammars of NSGA-II and SMS-EMOA for real-coded problems apply SBX with probability 0.9 instead
   of 1.0, the simplex crossover's expansion defaults to 2.0 within [1, 3], and SMS-EMOA no longer

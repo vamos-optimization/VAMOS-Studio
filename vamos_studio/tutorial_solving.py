@@ -5,7 +5,8 @@ Adapted from Evolver-Studio's tutorial "Solving a problem with a configurable al
 choose a problem, run NSGA-II with its default configuration, read the result, change the
 configuration, try a harder problem, then do it by hand in New run. Every run is a *prepared run*
 (vamos_studio/tutorial_runs.py), fixed by a seed; the values the text announces were measured with
-VAMOS 1.2.1, and the companion notebook (vamos_studio/notebooks/s2_solving.ipynb) finds the same.
+VAMOS 1.4.0 (the same as with 1.2.1), and the companion notebook
+(vamos_studio/notebooks/s2_solving.ipynb) finds the same.
 """
 
 from __future__ import annotations
