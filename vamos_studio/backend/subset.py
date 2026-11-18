@@ -1,17 +1,17 @@
 """Choosing the result of a run from an unbounded archive: a diverse subset of it.
 
-An unbounded external archive keeps every non-dominated solution found, thousands of them, and
-VAMOS (1.1 and 1.2) returns them all. As jMetal does (its BestSolutionsArchive), the studio
-returns a subset as large as the population, chosen by the configuration's
-`archive_subset_selection`.
+An unbounded external archive keeps every non-dominated solution found, thousands of them. As
+jMetal does (its BestSolutionsArchive), the studio returns a subset as large as the population,
+chosen by the configuration's `archive_subset_selection`, and keeps the whole archive beside it.
 The selection itself is VAMOS's (vamos.engine.algorithm.components.subset_selection).
 
 `farthest` is VAMOS's farthest-point (max-min distance) selection on objectives normalized with
-the archive's bounds: the greedy selection of the distance-based subset selection (DSS) of Singh,
-Bhattacharjee and Ray (IEEE TEC, 2019), which jMetal applies for three or more objectives.
+the archive's bounds (`normalize=True`, VAMOS 1.3): the greedy selection of the distance-based
+subset selection (DSS) of Singh, Bhattacharjee and Ray (IEEE TEC, 2019), which jMetal applies for
+three or more objectives.
 
-Upstream target: a final subset selection of unbounded archives in VAMOS's archive
-configuration. Status: local (see UPSTREAM.md).
+VAMOS 1.3 can also select the result itself (`ExternalArchiveConfig.final_selection`); the studio
+selects it here so that the Monitor can preview the subset of the archive while the run goes on.
 """
 
 from __future__ import annotations
@@ -32,17 +32,11 @@ Selector = Callable[[NDArray[np.float64], int], NDArray[np.int_]]
 NO_SELECTION: Final = "none"
 
 
-def _normalized(front: NDArray[np.float64]) -> NDArray[np.float64]:
-    lower, upper = front.min(axis=0), front.max(axis=0)
-    span = np.where(upper > lower, upper - lower, 1.0)
-    return (front - lower) / span
-
-
 METHODS: Final[dict[str, Selector]] = {
-    "farthest": lambda front, k: select_top_k_farthest(_normalized(front), k),
+    "farthest": lambda front, k: select_top_k_farthest(front, k, normalize=True),
     "crowding": select_top_k_crowding,
     "hv_greedy": select_top_k_hv_greedy,
-    # VAMOS 1.2 needs an explicit generator; a fixed seed gives each front one subset.
+    # A fixed seed gives each front one subset.
     "kmeans": lambda front, k: select_top_k_kmeans(front, k, rng=np.random.default_rng(0)),
 }
 
