@@ -97,6 +97,8 @@ class SolveRequest:
             "approximate" (a copy of its approximate front at launch) or "none".
         contribute: Whether the run's solutions are added to the approximate front of its
             problem when it ends.
+        reference_vectors: For NSGA-III and RVEA, the file of reference vectors they start from
+            instead of a lattice (see vamos_studio/backend/vector_files.py); None for the lattice.
     """
 
     problem: str
@@ -114,6 +116,7 @@ class SolveRequest:
     problem_kwargs: dict[str, Any] = field(default_factory=dict)
     reference_front: str = "exact"
     contribute: bool = False
+    reference_vectors: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """The request as a JSON-ready mapping."""

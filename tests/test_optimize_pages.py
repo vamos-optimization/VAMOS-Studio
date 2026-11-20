@@ -675,3 +675,48 @@ class TestHomeShowsTheLatestRun:
         # Assert
         assert not home.exception
         assert any(c.value.startswith("In progress: NSGA-II on ZDT1") for c in home.caption)
+
+
+class TestReferenceVectors:
+    def test_should_launch_rvea_from_a_file_shipped_with_vamos(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        app = choose_dtlz2(open_page(NEW_RUN), 3)
+        algorithm = next(box for box in app.selectbox if box.label == "Algorithm")
+        algorithm.select_index(algorithm.options.index("RVEA")).run()
+        number_input(app, "Evaluations").set_value(1500).run()
+        next(radio for radio in app.radio if radio.label == "Reference vectors").set_value(
+            "packaged"
+        ).run()
+        next(box for box in app.selectbox if box.label == "File for 3 objectives").select(
+            "W3D_100.dat"
+        ).run()
+        captions = [caption.value for caption in app.caption]
+
+        # Act
+        next(b for b in app.button if b.label == "Launch the run").click().run()
+        run = runs.list_runs(tmp_path)[0]
+        state = wait_for_end(run)
+        results = open_page(RESULTS)
+
+        # Assert
+        assert not app.exception and not results.exception
+        assert any("RVEA runs with 100 solutions" in caption for caption in captions)
+        assert state == RunState.FINISHED
+        assert runs.manifest(run)["resolved_spec"]["algorithm"]["config"]["pop_size"] == 100
+
+    def test_should_not_launch_without_the_users_file(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        app = choose_dtlz2(open_page(NEW_RUN), 3)
+        algorithm = next(box for box in app.selectbox if box.label == "Algorithm")
+        algorithm.select_index(algorithm.options.index("NSGA-III")).run()
+
+        # Act
+        next(radio for radio in app.radio if radio.label == "Reference vectors").set_value(
+            "file"
+        ).run()
+
+        # Assert
+        assert not app.exception
+        assert next(b for b in app.button if b.label == "Launch the run").disabled

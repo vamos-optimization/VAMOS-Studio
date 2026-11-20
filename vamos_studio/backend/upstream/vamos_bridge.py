@@ -19,6 +19,7 @@ lattice or one of jMetal's files) and RVEA the largest lattice up to ``pop_size`
 from __future__ import annotations
 
 import copy
+import dataclasses
 import math
 from collections.abc import Mapping
 from functools import cache
@@ -50,6 +51,8 @@ BUILTIN_SPACES: Final = (
 )
 # Parameters of the studio's layer that VAMOS's grammars do not have.
 STUDIO_ONLY_PARAMETERS: Final = frozenset({"pop_size", "archive_subset_selection"})
+# The configuration field that takes a file of reference vectors, by algorithm (VAMOS 1.5).
+VECTOR_FIELDS: Final = {"nsgaiii": "reference_directions", "rvea": "reference_vectors"}
 # Algorithms whose population depends on the problem's number of objectives.
 _NEEDS_N_OBJ: Final = frozenset({"moead", "rvea", "nsgaiii"})
 
@@ -133,7 +136,10 @@ def to_vamos_assignment(configuration: Configuration, n_obj: int | None = None) 
 
 
 def to_algorithm_config(
-    configuration: Configuration, n_var: int | None = None, n_obj: int | None = None
+    configuration: Configuration,
+    n_var: int | None = None,
+    n_obj: int | None = None,
+    vectors: tuple[str, int] | None = None,
 ) -> AlgorithmConfigProtocol:
     """The VAMOS algorithm configuration that `configuration` describes for a problem.
 
@@ -142,22 +148,37 @@ def to_algorithm_config(
         n_var: The problem's number of variables (VAMOS resolves the mutation probability factor
             when the run starts; kept for the callers that pass it).
         n_obj: The problem's number of objectives: MOEA/D, RVEA and NSGA-III need it.
+        vectors: For NSGA-III and RVEA, a file of reference vectors and how many it has: they
+            start from it instead of a lattice, with one individual per vector.
     """
     del n_var
     space = configuration.space
-    return config_from_assignment(
+    config = config_from_assignment(
         vamos_space_name(space.algorithm, space.encoding),
         to_vamos_assignment(configuration, n_obj),
     )
+    if vectors is None:
+        return config
+    if space.algorithm not in VECTOR_FIELDS:
+        raise ValueError(f"{space.algorithm} does not take a file of reference vectors.")
+    path, size = vectors
+    return dataclasses.replace(
+        config, pop_size=size, **{VECTOR_FIELDS[space.algorithm]: {"path": path}}
+    )
 
 
-def population(values: Mapping[str, Any], algorithm: str, n_obj: int) -> int:
+def population(
+    values: Mapping[str, Any], algorithm: str, n_obj: int, vectors: int | None = None
+) -> int:
     """The population a configuration runs with on a problem of `n_obj` objectives.
 
-    MOEA/D's, with three or more objectives, the largest up to `pop_size` with weight vectors;
-    RVEA's, its largest Das-Dennis lattice up to `pop_size` (or the lattice of `n_partitions`, for a
-    run saved before VAMOS 1.4); the others', `pop_size`.
+    With a file of `vectors` reference vectors (NSGA-III and RVEA), one individual per vector.
+    Otherwise MOEA/D's, with three or more objectives, is the largest up to `pop_size` with weight
+    vectors; RVEA's, its largest Das-Dennis lattice up to `pop_size` (or the lattice of
+    `n_partitions`, for a run saved before VAMOS 1.4); the others', `pop_size`.
     """
+    if vectors is not None:
+        return vectors
     if algorithm == "rvea" and "n_partitions" in values:
         return math.comb(int(values["n_partitions"]) + n_obj - 1, n_obj - 1)
     pop_size = int(values["pop_size"])

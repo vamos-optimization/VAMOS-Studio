@@ -12,7 +12,7 @@ import pandas as pd
 import streamlit as st
 
 from vamos_studio import charts, on_demand, series_view, ui
-from vamos_studio.backend import approximate_fronts, runs, series
+from vamos_studio.backend import approximate_fronts, runs, series, vector_files
 from vamos_studio.backend.catalogue import problem_entry
 from vamos_studio.backend.indicators import available_indicators, compute_all
 from vamos_studio.backend.upstream.vamos_bridge import builtin_space
@@ -161,6 +161,11 @@ def render_configuration(request: runs.SolveRequest) -> None:
         )
     )
     st.code(configuration.to_cli(), language="bash", wrap_lines=True)
+    if request.reference_vectors:
+        st.markdown(
+            f"**Reference vectors** — {vector_files.describe(request.reference_vectors)}, "
+            "instead of a lattice."
+        )
 
 
 def show_details(run: runs.SolveRun, request: runs.SolveRequest) -> None:

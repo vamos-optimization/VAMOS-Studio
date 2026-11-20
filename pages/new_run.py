@@ -9,7 +9,7 @@ import os
 import streamlit as st
 
 from vamos_studio import ui
-from vamos_studio.backend import approximate_fronts, runs, series
+from vamos_studio.backend import approximate_fronts, runs, series, vector_files
 from vamos_studio.backend.catalogue import (
     algorithm_entries,
     default_algorithm_index,
@@ -146,6 +146,58 @@ def render_reference_front(problem, n_var: int, n_obj: int, problem_kwargs: dict
     return choice, contribute
 
 
+LATTICE = "lattice"
+VECTOR_OPTIONS = {
+    LATTICE: "Das-Dennis lattice (VAMOS's default)",
+    vector_files.PACKAGED: "A weight vector file shipped with VAMOS",
+    vector_files.USER_FILE: "Your own file",
+}
+
+
+def render_reference_vectors(algorithm: str, n_obj: int) -> dict | None:
+    """Where NSGA-III and RVEA take their reference vectors from; None for VAMOS's lattice."""
+    label = "NSGA-III" if algorithm == "nsgaiii" else "RVEA"
+    shipped = vector_files.packaged_files(n_obj)
+    options = [LATTICE, vector_files.USER_FILE]
+    if shipped:
+        options.insert(1, vector_files.PACKAGED)
+    choice = st.radio(
+        "Reference vectors",
+        options,
+        format_func=VECTOR_OPTIONS.get,
+        horizontal=True,
+        key=f"new_run.vectors.{algorithm}.{n_obj}",
+        help=f"{label} builds its reference vectors as a Das-Dennis lattice. As in jMetal and "
+        "Evolver, it can start from a file of weight vectors instead: one of jMetal's files that "
+        "VAMOS ships, or your own. With a file, the population is its number of vectors.",
+    )
+    if choice == LATTICE:
+        return None
+    if choice == vector_files.PACKAGED:
+        name = st.selectbox(
+            f"File for {n_obj} objectives",
+            shipped,
+            key=f"new_run.vectors.file.{n_obj}",
+            help="jMetal's weight vector files, named W<objectives>D_<vectors>.dat.",
+        )
+        return vector_files.packaged(name)
+    upload = st.file_uploader(
+        f"A file of weight vectors with {n_obj} components each",
+        type=["dat", "csv", "txt"],
+        key=f"new_run.vectors.upload.{algorithm}.{n_obj}",
+        help="One vector per line, its components separated by spaces or commas; each vector "
+        "non-negative and summing to 1.",
+    )
+    if upload is None:
+        st.info("Choose a file to launch the run with it.", icon=":material/upload_file:")
+        return {}
+    try:
+        return vector_files.uploaded(upload.name, upload.getvalue(), n_obj)
+    except ValueError as error:
+        st.error(f"{upload.name} cannot be used: {error}")
+        return {}
+
+
 problems = [entry for entry in problem_entries() if entry.available]
 st.subheader("1. Problem")
 problem = st.selectbox("Problem", problems, format_func=lambda item: item.label)
@@ -176,9 +228,24 @@ space = builtin_space(algorithm.key, problem.encoding)
 st.subheader("3. Configuration")
 configuration = render_configuration(space)
 
-for level, text in population_notes(
-    algorithm.key, configuration.values, details.n_obj
-) + objective_notes(algorithm.key, details.n_obj):
+vectors = (
+    render_reference_vectors(algorithm.key, details.n_obj)
+    if vector_files.takes_vectors(algorithm.key)
+    else None
+)
+valid_vectors = vectors != {}
+vectors = vectors or None
+if vectors is not None:
+    notes = [
+        (
+            "caption",
+            f"{algorithm.label} runs with {vector_files.count(vectors):,} solutions, one per "
+            f"vector of {vector_files.describe(vectors)}; the population size above is not used.",
+        )
+    ]
+else:
+    notes = population_notes(algorithm.key, configuration.values, details.n_obj)
+for level, text in notes + objective_notes(algorithm.key, details.n_obj):
     {"caption": st.caption, "info": st.info, "warning": st.warning}[level](text)
 
 st.subheader("4. Budget")
@@ -253,15 +320,24 @@ def render_live_view(max_evaluations: int, values: dict, pop_size: int) -> tuple
 pause_seconds, pause_every = render_live_view(
     int(max_evaluations),
     dict(configuration.values),
-    population(configuration.values, algorithm.key, details.n_obj),
+    population(
+        configuration.values,
+        algorithm.key,
+        details.n_obj,
+        vector_files.count(vectors) if vectors else None,
+    ),
 )
 
 if st.button(
     "Launch the run",
     type="primary",
     icon=":material/play_arrow:",
-    disabled=not valid_problem,
-    help=None if valid_problem else "Fix the problem's arguments first.",
+    disabled=not (valid_problem and valid_vectors),
+    help=None
+    if valid_problem and valid_vectors
+    else "Fix the problem's arguments first."
+    if not valid_problem
+    else "Choose a valid file of reference vectors first.",
 ):
     request = runs.SolveRequest(
         problem=problem.key,
@@ -279,6 +355,7 @@ if st.button(
         problem_kwargs=problem_kwargs,
         reference_front=reference_choice,
         contribute=contribute,
+        reference_vectors=vectors,
     )
     if count > 1:
         ui.select_series(series.launch(request, count, parallel, runs.runs_directory()))

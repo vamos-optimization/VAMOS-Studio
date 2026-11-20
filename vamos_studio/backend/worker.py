@@ -18,7 +18,7 @@ from typing import Any, Final
 import numpy as np
 import vamos
 
-from . import subset
+from . import subset, vector_files
 from .runs import (
     LIVE_FRONT_FILE,
     SELECTION_FILE,
@@ -199,9 +199,16 @@ def solve(request: SolveRequest, progress: FileProgress) -> Any:
     if space.content_hash() != request.space_hash:
         raise ValueError(f"The grammar {space.name} changed since the run was requested.")
     arguments = run_arguments(request)
+    vectors = None
+    if request.reference_vectors is not None:
+        spec = request.reference_vectors
+        vectors = (vector_files.materialize(spec, progress.directory), vector_files.count(spec))
     config = with_live_archive(
         to_algorithm_config(
-            space.configuration(request.configuration), arguments["n_var"], arguments["n_obj"]
+            space.configuration(request.configuration),
+            arguments["n_var"],
+            arguments["n_obj"],
+            vectors,
         )
     )
     if getattr(config, "live_callback_mode", None) == ARCHIVE_LIVE_MODE:
@@ -235,7 +242,12 @@ def save_selection(directory: Path, request: SolveRequest, result: Any) -> np.nd
     if method is None:
         return None
     front = np.asarray(result.front(), dtype=float)
-    size = population(request.configuration, request.algorithm, run_arguments(request)["n_obj"])
+    size = population(
+        request.configuration,
+        request.algorithm,
+        run_arguments(request)["n_obj"],
+        vector_files.count(request.reference_vectors) if request.reference_vectors else None,
+    )
     kept = subset.select(method, front, size)
     write_json(
         directory / SELECTION_FILE,
