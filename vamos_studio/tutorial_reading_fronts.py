@@ -5,7 +5,7 @@ reference fronts the studio copies from jMetal), how quality indicators measure 
 one (on approximations built from the reference front itself, as in Explore › Quality indicators),
 and how to read them in a run (a prepared run of NSGA-II on DTLZ2 with three objectives). The
 values of the interactive steps are computed as you move the sliders; those of the run were
-measured with VAMOS 1.4.0 (the same as with 1.2.1), and the companion notebook finds the
+measured with VAMOS 1.5.0 (the same as with 1.2.1 and 1.4.0), and the companion notebook finds the
 same.
 """
 

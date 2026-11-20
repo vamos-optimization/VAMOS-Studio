@@ -6,10 +6,19 @@ with.
 
 ## 0.1.0 (unreleased)
 
-Works with VAMOS 1.4 (1.4.0 or later).
+Works with VAMOS 1.5 (1.5.0 or later).
 
 ### Added
 
+- **Reference vectors from a file for NSGA-III and RVEA** (VAMOS 1.5): in New run, instead of
+  VAMOS's Das-Dennis lattice, one of jMetal's weight vector files that VAMOS ships for the
+  problem's number of objectives (`W3D_91.dat`, `W3D_100.dat`, ...) or the user's own file (one
+  vector per line, separated by spaces or commas). The population is the number of vectors. The
+  run keeps the choice (the user's vectors with it), and Results shows it.
+- **Exact or approximate hypervolume** wherever the indicators are computed on request (Results,
+  series, Explore › Quality indicators): VAMOS's approximation (moocore's Rphi-FWE+, 100,000
+  samples, deterministic) is offered first from five objectives, where the exact hypervolume can
+  take minutes; the values say when HV and NHV are approximate.
 - The app's shell: a home page and the Explore, Optimize and Analyze sections, organized as
   Transept's, in a menu along the top with Material icons.
 - **The VAMOS logo and colors**: the logo heads the menu and the home page, its V is the tab's
@@ -166,6 +175,12 @@ Works with VAMOS 1.4 (1.4.0 or later).
 
 ### Changed
 
+- **VAMOS 1.5.0 or later** (up to 1.6) instead of 1.4.0. NSGA-III selects its parents at random by
+  default, as Deb and Jain's, or by a tournament on rank (its form gains `selection`), so its
+  results change. AGE-MOEA can run AGE-MOEA-II's survival (`replacement`). MOEA/D with four
+  objectives and 100 individuals runs 100 weight vectors (VAMOS 1.4 skipped its broken
+  `W4D_100.dat` and ran 84). The other algorithms' default configurations, and the tutorials'
+  values, do not change.
 - **VAMOS 1.4.0 or later** (up to 1.5) instead of 1.2.1. The algorithms' parameter spaces are now
   **VAMOS's own grammars**, which VAMOS 1.4 ships on the model the studio prototyped: the studio
   adds the population size, the subset selection of an unbounded archive and the labels of the

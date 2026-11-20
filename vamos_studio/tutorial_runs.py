@@ -30,7 +30,7 @@ from vamos_studio.tutorials import Tutorial
 
 NOTEBOOKS_PACKAGE: Final = "vamos_studio.notebooks"
 # The VAMOS version the announced values were measured with.
-MEASURED_WITH: Final = "1.4.0"
+MEASURED_WITH: Final = "1.5.0"
 # The values the text announces are written with four significant digits.
 EXPECTED_TOLERANCE: Final = 5e-4
 RUN_TIMEOUT_SECONDS: Final = 180

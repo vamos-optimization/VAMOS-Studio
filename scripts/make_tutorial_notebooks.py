@@ -171,7 +171,7 @@ def s2_solving() -> nbformat.NotebookNode:
                 "# S2. Solving a problem, in Python\n\n"
                 "The companion of VAMOS-Studio's tutorial *S2. Solving a problem*: the same runs "
                 "with VAMOS's Python API. Each run is fixed by its seed, so it finds the same "
-                "front and the same values as the tutorial (measured with VAMOS 1.4.0). It pairs "
+                "front and the same values as the tutorial (measured with VAMOS 1.5.0). It pairs "
                 f"with VAMOS's tutorial [T01. Your first result]({DOCS}/t01-first-result/)."
             ),
             new_markdown_cell(
