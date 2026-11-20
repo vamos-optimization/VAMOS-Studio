@@ -14,7 +14,7 @@ class TestVamosVersion:
 
         # Assert
         assert installed is not None
-        assert installed.startswith("1.4")
+        assert installed.startswith("1.5")
 
     def test_should_return_none_when_vamos_is_not_installed(self, monkeypatch: pytest.MonkeyPatch):
         # Arrange

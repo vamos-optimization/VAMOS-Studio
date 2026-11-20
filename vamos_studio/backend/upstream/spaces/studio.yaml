@@ -180,6 +180,10 @@ labels:
     label: Reference point offset
     description: How far beyond the worst value of each objective the hypervolume's reference point lies,
       adapted as the run goes on.
+  replacement:
+    label: Replacement
+    description: AGE-MOEA's survival, the original or AGE-MOEA-II's (Panichella, 2022), which
+      estimates the front's shape by Newton-Raphson and measures diversity with geodesic distances.
   repair:
     label: Repair
     description: How variables that leave their bounds are brought back.

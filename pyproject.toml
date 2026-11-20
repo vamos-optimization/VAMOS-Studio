@@ -13,7 +13,7 @@ requires-python = ">=3.11"
 dependencies = [
     # The backend. Pinned to a minor series: the studio reads parts of VAMOS's catalogue that
     # are internal in 1.2 (see CLAUDE.md, "Relationship to VAMOS").
-    "vamos-optimization>=1.4.0,<1.5",
+    "vamos-optimization>=1.5.0,<1.6",
     "streamlit>=1.40",
     "pyyaml",
     "pandas",
@@ -25,7 +25,7 @@ dependencies = [
 [project.optional-dependencies]
 # Numba kernels for faster runs (VAMOS's `compute` extra).
 fast = [
-    "vamos-optimization[compute]>=1.4.0,<1.5",
+    "vamos-optimization[compute]>=1.5.0,<1.6",
 ]
 dev = [
     "pytest",

@@ -265,7 +265,7 @@ class TestPopulation:
             (100, 2, None),
             (100, 3, "W3D_100.dat"),
             (91, 3, None),
-            (100, 4, None),  # VAMOS 1.4's W4D_100.dat has 200 rows: it runs a lattice of 84
+            (100, 4, "W4D_100.dat"),
             (165, 4, None),
             (156, 8, "W8D_156.dat"),
         ],

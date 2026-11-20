@@ -189,21 +189,15 @@ def exact_divisions(size: int, n_obj: int) -> int | None:
 
 @cache
 def weight_populations(n_obj: int) -> tuple[int, ...]:
-    """The populations with a jMetal weight vector file that VAMOS reads, for `n_obj` objectives.
-
-    A file counts when it has as many rows as its name says: VAMOS skips the others (VAMOS 1.4
-    ships a `W4D_100.dat` with 200 rows).
-    """
-    sizes = []
+    """The populations with a jMetal weight vector file that VAMOS ships, for `n_obj` objectives."""
     prefix = f"W{n_obj}D_"
-    for path in VAMOS_WEIGHTS.iterdir():
-        name = path.name
-        if name.startswith(prefix) and name.endswith(".dat"):
-            size = int(name[len(prefix) : -len(".dat")])
-            rows = sum(1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
-            if rows == size:
-                sizes.append(size)
-    return tuple(sorted(sizes))
+    return tuple(
+        sorted(
+            int(path.name[len(prefix) : -len(".dat")])
+            for path in VAMOS_WEIGHTS.iterdir()
+            if path.name.startswith(prefix) and path.name.endswith(".dat")
+        )
+    )
 
 
 def weight_population(pop_size: int, n_obj: int) -> int:
