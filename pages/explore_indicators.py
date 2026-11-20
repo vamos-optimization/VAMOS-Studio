@@ -81,11 +81,14 @@ approximation = sample_front(front, n_points, shift)
 if n_obj <= 3:
     values = compute_all(approximation, front)
 else:  # the hypervolume may take long: on request
-    values = on_demand.computed(
+    computed = on_demand.computed(
         f"sandbox:{problem.key}:{n_obj}:{n_points}:{shift}",
         n_obj,
-        lambda: compute_all(approximation, front),
+        lambda hv: compute_all(approximation, front, hv),
     )
+    values = None if computed is None else computed[0]
+    if computed is not None and (note := on_demand.method_note(computed[1])) is not None:
+        st.caption(note)
 
 if values is not None:
     metrics = st.columns(len(values))

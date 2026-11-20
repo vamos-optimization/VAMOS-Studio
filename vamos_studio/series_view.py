@@ -95,15 +95,18 @@ def _show_aggregate(chosen: series.Series) -> None:
 
 def _show_indicators(chosen: series.Series, pairs, reference) -> None:
     entries = available_indicators()
-    table = on_demand.computed(
+    computed = on_demand.computed(
         f"series:{chosen.series_id}:{len(pairs)}",
         reference.shape[1],
-        lambda: indicator_table(
-            [(m.seed, m.run.run_id, compute_all(front, reference)) for m, front in pairs]
+        lambda hv: indicator_table(
+            [(m.seed, m.run.run_id, compute_all(front, reference, hv)) for m, front in pairs]
         ),
     )
-    if table is None:
+    if computed is None:
         return
+    table, hv = computed
+    if (note := on_demand.method_note(hv)) is not None:
+        st.caption(note)
     keys = [entry.key for entry in entries]
     st.markdown("**Summary**")
     st.dataframe(summarize(table, keys), hide_index=True)

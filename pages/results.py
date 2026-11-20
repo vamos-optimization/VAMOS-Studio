@@ -57,9 +57,10 @@ def show_indicators(front: np.ndarray, reference: np.ndarray | None, label: str,
             "the approximate front of its problem make one: see below and Explore › Problems."
         )
         return
-    values = on_demand.computed(key, front.shape[1], lambda: compute_all(front, reference))
-    if values is None:
+    computed = on_demand.computed(key, front.shape[1], lambda hv: compute_all(front, reference, hv))
+    if computed is None:
         return
+    values, hv = computed
     st.dataframe(
         pd.DataFrame(
             [
@@ -77,6 +78,8 @@ def show_indicators(front: np.ndarray, reference: np.ndarray | None, label: str,
         f"Measured against {label}, with the front normalized by its bounds, as in "
         "Explore › Quality indicators."
     )
+    if (note := on_demand.method_note(hv)) is not None:
+        st.caption(note)
 
 
 def current_approximate_front(

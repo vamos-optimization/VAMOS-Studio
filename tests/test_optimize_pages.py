@@ -276,12 +276,31 @@ class TestManyObjectives:
         run = runs.launch(dataclasses.replace(make_request("dtlz2", 1000), n_obj=6), tmp_path)
         wait_for_end(run)
 
-        # Act
         app = open_page(RESULTS)
+        method = next(radio for radio in app.radio if radio.label == "Hypervolume")
+        offered = method.value
+
+        # Act
+        method.set_value("exact").run()
 
         # Assert
         assert not app.exception
-        assert any("With 6 objectives the hypervolume" in w.value for w in app.warning)
+        assert offered == "approximate"
+        assert any("With 6 objectives the exact hypervolume" in w.value for w in app.warning)
+
+    def test_should_compute_the_approximate_hypervolume_and_say_so(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(runs.RUNS_DIRECTORY_ENV, str(tmp_path))
+        run = runs.launch(dataclasses.replace(make_request("dtlz2", 1000), n_obj=6), tmp_path)
+        wait_for_end(run)
+        app = open_page(RESULTS)
+
+        # Act
+        app = compute_indicators(app)
+
+        # Assert
+        assert not app.exception
+        assert any("HV and NHV are approximate" in caption.value for caption in app.caption)
 
     def test_should_build_an_approximate_front_without_an_exact_one(self, tmp_path, monkeypatch):
         # Arrange

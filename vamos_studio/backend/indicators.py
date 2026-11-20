@@ -19,6 +19,7 @@ from typing import Final
 import numpy as np
 from numpy.typing import NDArray
 from vamos.foundation.quality_indicators import get_indicator
+from vamos.ux.api import HVApproxIndicator
 
 Front = NDArray[np.float64]
 
@@ -51,6 +52,14 @@ class IndicatorEntry:
     computed_by_studio: bool = False
     note: str = ""
 
+
+# How the hypervolume is computed: exactly, or by VAMOS's approximation (moocore's `hv_approx`,
+# VAMOS 1.5), which stays fast with many objectives. `Rphi-FWE+` is deterministic.
+EXACT: Final = "exact"
+APPROXIMATE: Final = "approximate"
+HV_METHODS: Final = {EXACT: "Exact", APPROXIMATE: "Approximate"}
+APPROXIMATE_METHOD: Final = "Rphi-FWE+"
+APPROXIMATE_SAMPLES: Final = 100_000
 
 INDICATORS: Final = (
     IndicatorEntry(
@@ -199,36 +208,52 @@ def normalize(front: Front, reference_front: Front) -> Front:
     return (front - lower) / span
 
 
-def compute(key: str, front: Front, reference_front: Front) -> float:
+def compute(key: str, front: Front, reference_front: Front, hv: str = EXACT) -> float:
     """The value of the indicator `key` for `front`, normalized with `reference_front`.
+
+    Args:
+        key: The indicator.
+        front: The front measured.
+        reference_front: The reference front, which also normalizes `front`.
+        hv: How HV and NHV compute the hypervolume: `EXACT` or `APPROXIMATE`.
 
     Raises:
         KeyError: If `key` is not an available indicator.
-        ValueError: If `front` is empty or the fronts have different numbers of objectives.
+        ValueError: If `front` is empty, the fronts have different numbers of objectives, or `hv`
+            is not a method.
     """
     if not indicator(key).available:
         raise KeyError(f"The indicator '{key}' is not available.")
+    if hv not in HV_METHODS:
+        raise ValueError(f"Unknown hypervolume method '{hv}'.")
     if np.asarray(front).size == 0:
         raise ValueError("The front is empty.")
     normalized = normalize(front, reference_front)
     normalized_reference = normalize(reference_front, reference_front)
     if key == "hv":
-        return _hypervolume(normalized)
+        return _hypervolume(normalized, hv)
     if key == "nhv":
-        return 1.0 - _hypervolume(normalized) / _hypervolume(normalized_reference)
+        return 1.0 - _hypervolume(normalized, hv) / _hypervolume(normalized_reference, hv)
     vamos_indicator = get_indicator(key, reference_front=normalized_reference)
     return float(vamos_indicator.compute(normalized).value)
 
 
-def compute_all(front: Front, reference_front: Front) -> dict[str, float]:
-    """The value of every available indicator for `front`, by key."""
+def compute_all(front: Front, reference_front: Front, hv: str = EXACT) -> dict[str, float]:
+    """The value of every available indicator for `front`, by key (see `compute`)."""
     return {
-        entry.key: compute(entry.key, front, reference_front) for entry in available_indicators()
+        entry.key: compute(entry.key, front, reference_front, hv)
+        for entry in available_indicators()
     }
 
 
-def _hypervolume(normalized: Front) -> float:
+def _hypervolume(normalized: Front, hv: str = EXACT) -> float:
     """VAMOS's hypervolume of a normalized front, clipped to [0, 1], up to (1, ..., 1)."""
     clipped = np.clip(normalized, 0.0, 1.0)
     reference_point = np.ones(normalized.shape[1])
+    if hv == APPROXIMATE:
+        approximation = HVApproxIndicator(reference_point=reference_point)
+        result = approximation.compute(
+            clipped, samples=APPROXIMATE_SAMPLES, method=APPROXIMATE_METHOD
+        )
+        return float(result.value)
     return float(get_indicator("hv", reference_point=reference_point).compute(clipped).value)
